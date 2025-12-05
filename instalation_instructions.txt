@@ -1,0 +1,12 @@
+To run DOZE application by executing python code, please follow these instructions:
+1) Download all files in the repo to a folder in your PC.
+2) Be sure the ZeemanCore.py and __init__.py are inside a folder called zeeman_package.
+3) Open an anaconda prompt .
+4) Create a conda environment by importing ROA_DOZE.yml file:
+conda env create -f ROA_DOZE.yml
+5) Activate the new conda environment:
+conda activate ROA_DOZE
+6) Change the working directory to the one where ZeemanAPP.py is located.
+7) Run the tool by the following command:
+python -m ZeemanAPP
+Enjoy!
