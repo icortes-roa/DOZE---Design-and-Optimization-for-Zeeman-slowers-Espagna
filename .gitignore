@@ -1,0 +1,18 @@
+# Python basics
+__pycache__/
+*.py[cod]
+
+# PyInstaller
+*.manifest
+*.spec
+build/
+dist/
+
+# Entornos virtuales (para que no subas tu anaconda por error)
+env/
+venv/
+.env
+
+# IDEs (si usas VSCode o PyCharm)
+.vscode/
+.idea/
