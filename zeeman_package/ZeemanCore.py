@@ -633,12 +633,20 @@ class ZeemanCore(object):
                              self.magnets[1][i].position[1]=-self.min_magnet_distance
                         # First two magnets are moved together (explanation on user manual)
                         if i==1:
-                            self.magnets[0][0].position[1]=self.magnets[0][1].position[1]-self.sep_ini
-                            self.magnets[1][0].position[1]=self.magnets[1][1].position[1]+self.sep_ini
+                            if self.magnets[0][1].position[1]-self.sep_ini >= self.min_magnet_distance:
+                                self.magnets[0][0].position[1]=self.magnets[0][1].position[1]-self.sep_ini
+                                self.magnets[1][0].position[1]=self.magnets[1][1].position[1]+self.sep_ini
+                            else:
+                                self.magnets[0][0].position[1]=self.min_magnet_distance
+                                self.magnets[1][0].position[1]=-self.min_magnet_distance
                         # Last two magnets are moved together (explanation on user manual)
                         if i==self.Npm-1:
-                            self.magnets[0][self.Npm].position[1]=self.magnets[0][self.Npm-1].position[1]-self.sep_last
-                            self.magnets[1][self.Npm].position[1]=self.magnets[1][self.Npm-1].position[1]+self.sep_last
+                            if self.magnets[0][self.Npm-1].position[1]-self.sep_last >= self.min_magnet_distance:
+                                self.magnets[0][self.Npm].position[1]=self.magnets[0][self.Npm-1].position[1]-self.sep_last
+                                self.magnets[1][self.Npm].position[1]=self.magnets[1][self.Npm-1].position[1]+self.sep_last
+                            else:
+                                self.magnets[0][self.Npm].position[1]=self.min_magnet_distance
+                                self.magnets[1][self.Npm].position[1]=-self.min_magnet_distance
                         new_B_tbo=self.col.getB(1000*self.z_axis)
                         if round(np.linalg.norm(B_tbo_act[:,1]-self.By_ideal),2) < round(np.linalg.norm(new_B_tbo[:,1]-self.By_ideal),2):
                             # If we get no improvements we leave magnets where they were initially.
@@ -670,7 +678,10 @@ class ZeemanCore(object):
                 iter_mins=0
                 # We save the magnets positions wehere minimum deviation was found.
                 for n in np.arange(0,self.Npm+1,1):
-                    pos_mins[n]=self.magnets[0][n].position[1]
+                    if self.magnets[0][n].position[1] >= self.min_magnet_distance:
+                        pos_mins[n]=self.magnets[0][n].position[1]
+                    else:
+                        pos_mins[n]=self.min_magnet_distance
             # Otherwise, we add 1 to the iterations chances we couldn't improve
             else:
                 iter_mins+=1
@@ -679,8 +690,12 @@ class ZeemanCore(object):
             if iter_mins==iters:
                 optimized=True
                 for n in np.arange(0,self.Npm+1,1):
-                    self.magnets[0][n].position[1]=pos_mins[n]
-                    self.magnets[1][n].position[1]=-pos_mins[n]
+                    if pos_mins[n] >= self.min_magnet_distance:
+                        self.magnets[0][n].position[1]=pos_mins[n]
+                        self.magnets[1][n].position[1]=-pos_mins[n]
+                    else:
+                        self.magnets[0][n].position[1]=self.min_magnet_distance
+                        self.magnets[1][n].position[1]=-self.min_magnet_distance
             print('IterTOT#', iterations, ' || IterSeries', iter_mins, '|| Desv {:.2f}'.format(desv[1]))
              
             iterations+=1
@@ -695,9 +710,12 @@ class ZeemanCore(object):
                 
                 # Restore magnet to last previous valid position
                 for n in np.arange(0, self.Npm + 1, 1):
-                    self.magnets[0][n].position[1] = pos_mins[n]
-                    self.magnets[1][n].position[1] = -pos_mins[n]
-                
+                    if pos_mins[n] >= self.min_magnet_distance:
+                        self.magnets[0][n].position[1] = pos_mins[n]
+                        self.magnets[1][n].position[1] = -pos_mins[n]
+                    else:
+                        self.magnets[0][n].position[1]=self.min_magnet_distance
+                        self.magnets[1][n].position[1]=-self.min_magnet_distance
                 # Recalculate B field with restored positions
                 self.By_current = self.col.getB(1000 * self.z_axis)[:, 1]
                 return
