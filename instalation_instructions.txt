@@ -1,12 +1,66 @@
-To run DOZE application by executing python code, please follow these instructions:
+---------------------------------IF YOU DON'T USE PYTHON--------------------------------
+If you are a user that doesn't use Python, we recommend you to use the compiled tool
+available in 4 different versions:
+ - Single EXE file and no console for logs. 
+	Clean and compact, but slower app start-up.
+ - Single EXE file and console for logs. 
+	Compact, some execution info on console. Also a bit slow when starting up.
+ - Single folder and no console for logs. 
+	Clean and quicker app start-up as no libraries has to be unzipped.
+ - Single folder and console for logs. 
+	Quicker app start-up too and some additional info on code execution.
+
+---------------------------------- IF YOU USE ANACONDA----------------------------------
+Automatic installation:
+ - Run the file install_conda.bat from windows command console or double clic on it.
+
+Automatic execution:
+ - Run the file run_conda.bat from windows command console or double clic on it.
+
+Manual installation:
 1) Download all files in the repo to a folder in your PC.
 2) Be sure the ZeemanCore.py and __init__.py are inside a folder called zeeman_package.
 3) Open an anaconda prompt .
 4) Create a conda environment by importing ROA_DOZE.yml file:
-conda env create -f ROA_DOZE.yml
-5) Activate the new conda environment:
-conda activate ROA_DOZE
-6) Change the working directory to the one where ZeemanAPP.py is located.
-7) Run the tool by the following command:
-python -m ZeemanAPP
-Enjoy!
+	conda env create -f ROA_DOZE.yml
+
+Manual execution:
+1) Open a conda prompt.
+2) Activate the new conda environment:
+	conda activate ROA_DOZE
+3) Change the working directory to the one where ZeemanAPP.py is located.
+4) Run the tool by the following command:
+	python -m ZeemanAPP
+
+
+------------------------------- IF YOU DON'T USE ANACONDA--------------------------------
+Automatic installation:
+ - Run the file install_noconda.bat from windows command console or double clic on it.
+
+Automatic execution:
+ - Run the file run_noconda.bat from windows command console or double clic on it.
+
+Manual installation:
+1) Check Python.exe is in your windwos path
+2) Download all files in the repo to a folder in your PC.
+3) Be sure the ZeemanCore.py and __init__.py are inside a folder called zeeman_package.
+4) Open Windows terminal command line.
+5) Create a virtual environment:
+	python -m venv ROA_DOZE
+   You can change the name of the environment from ROA_DOZE to one of your choice.
+6) Activate the new virtual environment:
+	call ROA_DOZE\Scripts\activate
+   Or use the name of environment you have used instead of ROA_DOZE.
+7) Upgrade pip by executing the following command:
+	python -m pip install --upgrade pip
+8) Install libraries needed by reading those contained in file requirements.txt:
+	pip install -r requirements.txt
+
+Manual execution:
+1) Open a Windows command line terminal.
+2) Be sure the enviroment where the app was installed is active. Otherwise:
+	call ROA_DOZE\Scripts\actívate
+   Or use the name of environment you have used instead of ROA_DOZE.
+3) Be sure the .py source file is in the same folder and execute:
+	python ZeemanAPP.py
+
