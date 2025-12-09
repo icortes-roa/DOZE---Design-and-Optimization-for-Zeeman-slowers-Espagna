@@ -5,7 +5,7 @@ echo      INSTALLING DEPENDENCIES
 echo ==========================================
 echo.
 
-:: 1. Comprobar si Python existe en el sistema
+:: 1. Check if python exist in system PATH
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Python is not installed or not in your PATH.
@@ -14,7 +14,7 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: 2. Crear entorno virtual "venv" si no existe
+:: 2. Create virtual environment "ROA_DOZE"
 if not exist "ROA_DOZE" (
     echo [+] Creating virtual environment...
     python -m venv ROA_DOZE
@@ -22,20 +22,19 @@ if not exist "ROA_DOZE" (
     echo [i] Virtual environment already exists.
 )
 
-:: 3. Activar y actualizar pip
+:: 3. Environment activation and pip upgrading
 echo [+] Activating environment...
 call ROA_DOZE\Scripts\activate
 
 echo [+] Upgrading pip...
 python -m pip install --upgrade pip
 
-:: 4. Instalar librerias desde requirements.txt
+:: 4. Installing libraries from requirements.txt
 if exist "requirements.txt" (
     echo [+] Installing libraries from requirements.txt...
     pip install -r requirements.txt
 ) else (
     echo [ERROR] requirements.txt not found!
-    echo Please create the file with 'PyQt5' inside.
     pause
     exit /b
 )
