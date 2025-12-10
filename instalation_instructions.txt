@@ -1,14 +1,8 @@
 ---------------------------------IF YOU DON'T USE PYTHON--------------------------------
 If you are a user that doesn't use Python, we recommend you to use the compiled tool
-available in 4 different versions:
- - Single EXE file and no console for logs. 
-	Clean and compact, but slower app start-up.
- - Single EXE file and console for logs. 
-	Compact, some execution info on console. Also a bit slow when starting up.
- - Single folder and no console for logs. 
-	Clean and quicker app start-up as no libraries has to be unzipped.
- - Single folder and console for logs. 
-	Quicker app start-up too and some additional info on code execution.
+available in release section.
+
+Just download and decompress the ZIP package and double-click on the EXE file.
 
 ---------------------------------- IF YOU USE ANACONDA----------------------------------
 Automatic installation:
