@@ -24,7 +24,7 @@ import os
 import matplotlib
 from colorama import Fore, Style, init
 matplotlib.rcParams['font.family'] = 'sans-serif'
-matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Verdana', 'sans-serif']
+matplotlib.rcParams['font.sans-serif'] = ['Calibri']
 
 import h5py
 import traceback
@@ -33,6 +33,57 @@ import ctypes
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import matplotlib.image as mpimg
 
+class LabTweaksDialog(QDialog):
+    def __init__(self, power, detuning, waist, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Lab Experimental Tweaks")
+        self.setFixedWidth(300)
+        
+        layout = QVBoxLayout()
+        form = QFormLayout()
+
+        # Create editable inputs (pre-filled with current values)
+        self.power_input = QDoubleSpinBox()
+        self.power_input.setRange(0, 5000)
+        self.power_input.setValue(power)
+        self.power_input.setSuffix(" mW")
+
+        self.detuning_input = QDoubleSpinBox()
+        self.detuning_input.setRange(-2000, 2000)
+        self.detuning_input.setValue(detuning)
+        self.detuning_input.setSuffix(" MHz")
+
+        self.waist_input = QDoubleSpinBox()
+        self.waist_input.setRange(0.1, 100)
+        self.waist_input.setValue(waist)
+        self.waist_input.setSuffix(" mm")
+
+        form.addRow("Laser Power:", self.power_input)
+        form.addRow("Detuning:", self.detuning_input)
+        form.addRow("Beam Waist Radius:", self.waist_input)
+        
+        layout.addLayout(form)
+
+        # Buttons
+        buttons = QHBoxLayout()
+        self.btn_run = QPushButton("Run Kinetics")
+        self.btn_run.setStyleSheet("background-color: #a1d99b; font-weight: bold;")
+        self.btn_cancel = QPushButton("Cancel")
+        
+        self.btn_run.clicked.connect(self.accept)
+        self.btn_cancel.clicked.connect(self.reject)
+        
+        buttons.addWidget(self.btn_run)
+        buttons.addWidget(self.btn_cancel)
+        layout.addLayout(buttons)
+        
+        self.setLayout(layout)
+
+    def get_values(self):
+        return (self.power_input.value(), 
+                self.detuning_input.value(), 
+                self.waist_input.value())
+    
 class WorkerThread(QThread):
     """
     Generic Worker Thread to run any function in background.
@@ -213,6 +264,9 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)  
         
+        self.ui.comboBox_Atom.clear() # Borra las opciones por defecto
+        self.ui.comboBox_Atom.addItems(['87Sr', '171Yb', '199Hg' , '88Sr', '174Yb', '111Cd','24Mg'])
+        
        # =========================================================================
         # AUTO-LAYOUT WITH STICKY FOOTER LOGOS
         # =========================================================================
@@ -334,7 +388,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.ui.pushButton_save_file.clicked.connect(self.file_generate) # Save file with main data of simulation
         self.ui.pushButton_load_file.clicked.connect(self.load_data_from_file) # Save file with main data of simulation
         self.ui.pushButton_Update.clicked.connect(self.load_GUI_data)
-        self.ui.comboBox_Atom_Ion.activated.connect(self.atomic_parameters) # Load data for atomic species
+        self.ui.comboBox_Atom.activated.connect(self.atomic_parameters) # Load data for atomic species
         
         # •	Hide buttons not usable at the opening.
         self.ui.pushButton_Find_2.hide()
@@ -347,9 +401,8 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                
         self.primer =True
         self.test = False
-        
-        # Default value for Atom/Ion combo box
-        self.search_Atom_Ion = '87Sr'
+        # Default value for Atom combo box
+        self.search_Atom = '87Sr'
 
         # Read data from config.ini file and updates GUI
         self.load_initial_data()
@@ -386,7 +439,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         
         # 1. Define the manual list of the top controls in order
         tab_chain = [
-            self.ui.comboBox_Atom_Ion,
+            self.ui.comboBox_Atom,
             self.ui.pushButton_Update,
             self.ui.lineEdit_Number_of_magnets,
             self.ui.lineEdit_Power_laser,
@@ -477,13 +530,13 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.pw.figure.subplots_adjust(left=0.005, right=0.995, top=0.995, bottom=0.005, hspace=0)
 
         # 4. Place Logos (Adjust zoom in code if needed)
-        self.place_centered_image(self.pw.ax_B, 'logo.jpg', zoom=0.7) 
-        self.place_centered_image(self.pw.ax_B1, 'DOZE.png', zoom=0.7)
+        self.place_centered_image(self.pw.ax_B, 'logo.jpg', zoom=0.5) 
+        self.place_centered_image(self.pw.ax_B1, 'DOZE.png', zoom=0.5)
         
     def break_simulations(self):
         self.zeeman.break_simulations = True
         
-    def manage_buttons_update(self):
+    def manage_buttons_update_old(self):
         '''
             This function will show the update button and hide others to keep 
             app flowing in proper order
@@ -503,8 +556,40 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.ui.pushButton_2D_magnetic_field.hide()
         self.ui.pushButton_atomic_kinetics.hide()
         self.ui.pushButton_save_file.hide()
-      
-   
+     
+    def manage_buttons_update(self):
+        '''
+        This function will show the update button. 
+        If magnets exist, it keeps other buttons visible to allow experimental tweaks.
+        '''
+        sender = self.sender()
+        if sender:
+            # Optional debug
+            pass
+            
+        self.ui.pushButton_Update.show()
+        # self.ui.pushButton_Update.setFocus() # Optional, sometimes annoying if typing
+        
+        # Check if we have an optimized magnetic field ready
+        if hasattr(self.zeeman, 'magnets') and self.zeeman.magnets is not None:
+            # Magnets exist -> Allow Simulation
+            self.ui.pushButton_Find.show()
+            self.ui.pushButton_Find_2.show()
+            self.ui.pushButton_2D_magnetic_field.show()
+            self.ui.pushButton_atomic_kinetics.show()
+            self.ui.pushButton_save_file.show()
+            
+            # Visual cue: Button stays green/active
+            self.ui.pushButton_atomic_kinetics.setEnabled(True)
+            self.ui.pushButton_atomic_kinetics.setStyleSheet("background-color: #a1d99b;")
+        else:
+            # No magnets -> Hide everything until Update is clicked
+            self.ui.pushButton_Find.hide()
+            self.ui.pushButton_Find_2.hide()
+            self.ui.pushButton_2D_magnetic_field.hide()
+            self.ui.pushButton_atomic_kinetics.hide()
+            self.ui.pushButton_save_file.hide()
+       
     def prepare_lineEdits(self):
         '''
             We set the properties of the spinboxes in the upper left part of the GUI
@@ -617,6 +702,16 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         #Reads data from config.ini
         configur = ConfigParser()
         configur.read('config.ini')
+        
+        self.search_Atom = configur.get('data_initial', 'Atom').strip()
+        
+        index = self.ui.comboBox_Atom.findText(self.search_Atom)
+
+        if index >= 0:
+            self.ui.comboBox_Atom.setCurrentIndex(index)
+        else:
+            print(f"Warning: Isotope '{self.search_Atom}' is not in the list.")
+        
   
         # Update values read from config.ini
         self.zeeman.Npm = configur.getint('data_initial','Npm')     # Number of pairs of magnets
@@ -633,7 +728,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.d0_Mhz = configur.getfloat('data_initial','d0') # Laser detuning [MHz]
         self.zeeman.Delta0 = self.zeeman.d0_Mhz * 2 * np.pi * 1e6   # Laser detuning [rad/s]
          
-        self.zeeman.w0 = configur.getfloat('data_initial','w0') / 1000 # Beam waist: read in [mm], stored in [m] (division factor 1000)
+        self.zeeman.w0 = configur.getfloat('data_initial','w0') / 1000 # Beam waist radius: read in [mm], stored in [m] (division factor 1000)
                 
         self.zeeman.mag_diam = configur.getfloat('data_initial','mag_diam')  # Magnet diameter [mm]
         self.zeeman.mag_heig = configur.getfloat('data_initial','mag_heig')  # Magnet height [mm]
@@ -654,15 +749,33 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.Nt = int(configur.getfloat('atomic_kinetics','Nt')) # Time vector number of points
         self.zeeman.dt = configur.getfloat('atomic_kinetics','dt')      # Time vector resolution [s]
         self.zeeman.atoms_initial_z_position = configur.getfloat('atomic_kinetics','atoms_initial_z_position')   # z position where atoms are placed at t=0 of simulation time [mm]
+        self.zeeman.dist_veloc_meas = configur.getfloat('atomic_kinetics','dist_veloc_meas')   # z position after Zeeman slower exit where atoms velocity is measured [cm]
         self.zeeman.use_sigma_plus = configur.getboolean('atomic_kinetics','use_sigma_plus') #Consider usage of sigma+ light [Bool]
         
         self.zeeman.B_points = configur.getint('number of points to calculate B','B_points')      # Time vector resolution [s]
         self.zeeman.B_points_additional = configur.getint('number of points to calculate B','B_points_additional')      # Time vector resolution [s]
         self.zeeman.scale_factor_B = configur.getfloat('scale_factor_B','scale_factor_B')      # Time vector resolution [s]
         
+        graph_fontsize = configur.get('save_graphics','graphics_fontsize')      # Graphics fontsize large/medium/small
+        print('Graph text sizes ',graph_fontsize)
+        
+        if graph_fontsize == 'small':
+            self.zeeman.title_size=14
+            self.zeeman.others_size=12
+            self.zeeman.tick_size=10
+        elif graph_fontsize == 'medium':
+            self.zeeman.title_size=20
+            self.zeeman.others_size=17
+            self.zeeman.tick_size=14
+        elif graph_fontsize == 'large':
+            self.zeeman.title_size=24
+            self.zeeman.others_size=20
+            self.zeeman.tick_size=16
+        
+        print(f"Graph text sizes leído: [{graph_fontsize}]")
         
         # We load the atomic parameters too
-        self.atomic_parameters()
+        self.read_atomic_parameters()
         
         self.update_GUI()
         
@@ -674,24 +787,31 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         """
         if self.test==True: print('-->> Entering Zeeman APP atomic_parameters()')
         
+        
+        self.search_Atom = self.ui.comboBox_Atom.currentText()
+        
+        self.read_atomic_parameters()
+        
+        
+        if self.test==True:  print('<<--EXITING Zeeman APP atomic_parameters()')
+        
+    def read_atomic_parameters(self):
+        """ 
+            Reading data from config.ini and converting to used units
+        """
+        if self.test==True: print('-->> Entering Zeeman APP atomic_parameters()')
+        
         configur = ConfigParser()
         configur.read('config.ini')
-        self.search_Atom_Ion = self.ui.comboBox_Atom_Ion.currentText()
+                
+        self.zeeman.m = 1.6605e-27 * configur.getfloat('atomic_parameter_'+self.search_Atom,'m') #[Kg]
+        self.zeeman.WL_ge = configur.getfloat('atomic_parameter_'+self.search_Atom,'WL_ge') 
+        self.zeeman.gamma0 = configur.getfloat('atomic_parameter_'+self.search_Atom,'gamma')
+        self.zeeman.mu_eff = 9.274e-24 * configur.getfloat('atomic_parameter_'+self.search_Atom,'mu_eff') #[J/T]
         
-        if self.search_Atom_Ion == '87Sr':
-     
-            self.zeeman.m = 1.6605e-27 * configur.getfloat('atomic_parameter_Sr87','m') #[Kg]
-            self.zeeman.WL_ge = configur.getfloat('atomic_parameter_Sr87','WL_ge') 
-            self.zeeman.gamma = configur.getfloat('atomic_parameter_Sr87','gamma')
-            self.zeeman.mu_eff = 9.274e-24 * configur.getfloat('atomic_parameter_Sr87','mu_eff') #[J/T]
-
-        elif self.search_Atom_Ion == '171Yb':
-
-            self.zeeman.m = 1.6605e-27 * configur.getfloat('atomic_parameter_Yb171','m') #[Kg]
-            self.zeeman.WL_ge = configur.getfloat('atomic_parameter_Yb171','WL_ge') 
-            self.zeeman.gamma = configur.getfloat('atomic_parameter_Yb171','gamma') 
-            self.zeeman.mu_eff = 9.274e-24 * configur.getfloat('atomic_parameter_Yb171','mu_eff') #[J/T]
- 
+        print ('m ', self.zeeman.m, '; WL_ge ', self.zeeman.WL_ge, '; gamma ', self.zeeman.gamma0, '; mu_eff ', self.zeeman.mu_eff)
+        
+                   
         self.ui.pushButton_Find_2.hide()
         self.ui.pushButton_2D_magnetic_field.hide()
         self.ui.pushButton_atomic_kinetics.hide()
@@ -862,7 +982,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.d0_Mhz = int(self.ui.lineEdit_d0_Mhz.value())
         self.zeeman.Delta0 = 1e6 * 2 * np.pi * self.zeeman.d0_Mhz
  
-        #Beam waist diameter read in [mm], stored in [m]
+        #Beam waist radius read in [mm], stored in [m]
         self.zeeman.w0 = float(self.ui.lineEdit_w0.value())/1000 
 
         
@@ -1005,6 +1125,87 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
     def run_atomic_kinetics(self):
         """ 
         Starts the atomic kinetics calculation in a background thread.
+        Includes a popup to tweak experimental parameters before running.
+        """
+        if self.test: print('-->> Entering Zeeman APP run_atomic_kinetics()')
+
+        # --- 1. PRE-CHECKS: Avoid double execution ---
+        if hasattr(self, 'worker') and self.worker is not None and self.worker.isRunning():
+            print("Kinetics process is already running.")
+            return
+
+        # =========================================================================
+        # NEW: EXPERIMENTAL TWEAKS POPUP
+        # =========================================================================
+        # A. Get current values from GUI
+        curr_p = self.ui.lineEdit_Power_laser.value()
+        curr_d = self.ui.lineEdit_d0_Mhz.value()
+        curr_w = self.ui.lineEdit_w0.value()
+
+        # B. Show Dialog
+        dialog = LabTweaksDialog(curr_p, curr_d, curr_w, self)
+        
+        if dialog.exec_() == QDialog.Accepted:
+            # C. If user clicks Run, get new values
+            new_p, new_d, new_w = dialog.get_values()
+
+            # D. Update GUI widgets (Persistence)
+            self.ui.lineEdit_Power_laser.setValue(new_p)
+            self.ui.lineEdit_d0_Mhz.setValue(new_d)
+            self.ui.lineEdit_w0.setValue(new_w)
+
+            # E. Update Internal Data Structures (CRITICAL)
+            # We must load the new GUI values into the Zeeman object
+            # and recalculate physics constants (I_max, saturation, etc)
+            self.load_GUI_data()
+            self.zeeman.prepare_data()
+            
+            if self.test: print(f"Simulating with Tweaks: P={new_p}, d={new_d}, w={new_w}")
+        else:
+            # If user clicked Cancel, we stop everything here.
+            if self.test: print("User cancelled the kinetics simulation.")
+            return
+        # =========================================================================
+
+        # --- 2. CLEANUP: Disconnect previous cancel signals ---
+        try:
+            self.loading_screen.cancel_signal.disconnect()
+        except TypeError:
+            pass # Ignore if not connected
+
+        # --- 3. RESET FLAGS ---
+        self.was_cancelled = False
+        self.zeeman.break_simulations = False 
+        
+        # --- 4. UI SETUP ---
+        self.loading_screen.show_loading("Calculating Atomic Kinetics...\nSolving differential equations.", without_button=False)
+        self.loading_screen.update_progress(0)
+        
+        try:
+            # --- 5. THREAD CONFIGURATION ---
+            # We pass the Core function 'atomic_kinetics' to the worker
+            self.worker = WorkerThread(self.zeeman.atomic_kinetics)
+            
+            # Connect Signals
+            self.worker.progress_signal.connect(self.loading_screen.update_progress)
+            self.worker.finished_signal.connect(self.on_kinetics_finished)
+            self.worker.error_signal.connect(self.on_kinetics_error)
+            
+            # Connect Cancel Button
+            self.loading_screen.cancel_signal.connect(self.stop_kinetics)
+
+            # --- 6. START ---
+            self.worker.start()
+                      
+        except Exception as e:
+            print(f"{Fore.RED} Thread setup error: {e}")
+            self.loading_screen.stop_loading()
+            
+        if self.test: print('<<-- EXITED Zeeman APP run_atomic_kinetics() (Thread running in background)')
+    
+    def run_atomic_kinetics_old(self):
+        """ 
+        Starts the atomic kinetics calculation in a background thread.
         Replaces the old synchronous 'atomic_kinetics' function.
         """
         if self.test: print('-->> Entering Zeeman APP run_atomic_kinetics()')
@@ -1119,7 +1320,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                 # --- GROUP: PHYSICAL PARAMETERS ---
                 grp_params = f.create_group("Simulation_Parameters")
                 
-                grp_params.attrs['Atom_Species'] = self.ui.comboBox_Atom_Ion.currentText()
+                grp_params.attrs['Atom_Species'] = self.ui.comboBox_Atom.currentText()
                 # =================================================================
                 # MASTER DICTIONARY OF VARIABLES AND UNITS
                 # =================================================================
@@ -1145,7 +1346,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                     
                     # --- Laser ---
                     'P':                'W',    # Power
-                    'w0':               'm',    # Beam Waist
+                    'w0':               'm',    # Beam Waist radius
                     'd0_Mhz':           'MHz',  # Detuning (based on variable name)
                     'k0':               '1/m',  # Wavenumber
                     'WL_ge':            'm',    # Wavelength
@@ -1477,14 +1678,14 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                     
                     # 1.2 LOAD ATOM / ION SPECIES
                     if 'Atom_Species' in grp_params.attrs:
-                        atom_name = grp_params.attrs['Atom_Species']
+                        self.search_Atom = grp_params.attrs['Atom_Species']
                         # Look up in combo box
-                        index = self.ui.comboBox_Atom_Ion.findText(atom_name)
+                        index = self.ui.comboBox_Atom.findText(self.search_Atom)
                         if index >= 0:
-                            self.ui.comboBox_Atom_Ion.setCurrentIndex(index)
+                            self.ui.comboBox_Atom.setCurrentIndex(index)
                             # Important: update atoms physics(mass, lambda...)
-                            self.atomic_parameters() 
-                            print(f"Atom loaded: {atom_name}")
+                            self.read_atomic_parameters() 
+                            print(f"Atom loaded: {self.search_Atom}")
 
                 # 1.3 Specific Dimensions
                 if 'mag_diam' in f: self.zeeman.mag_diam = float(f['mag_diam'][()])
@@ -1617,7 +1818,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             if hasattr(self.zeeman, 'd0_Mhz') and hasattr(self.ui, 'lineEdit_d0_Mhz'):
                 self.ui.lineEdit_d0_Mhz.setValue(self.zeeman.d0_Mhz)
 
-            # 6. Beam Waist (QDoubleSpinBox) - m -> mm
+            # 6. Beam Waist radius (QDoubleSpinBox) - m -> mm
             # Nombre en GUI: lineEdit_w0
             if hasattr(self.zeeman, 'w0') and hasattr(self.ui, 'lineEdit_w0'):
                 self.ui.lineEdit_w0.setValue(self.zeeman.w0 * 1000)

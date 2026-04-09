@@ -14,7 +14,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 import matplotlib
 matplotlib.rcParams['font.family'] = 'sans-serif'
-matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Verdana', 'sans-serif']
+matplotlib.rcParams['font.sans-serif'] = ['Calibri']
+
+
 
 from PyQt5.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QTimer,
@@ -226,18 +228,18 @@ class Ui_MainWindow(object):
         sizePolicy1.setHeightForWidth(self.pushButton_Find_2.sizePolicy().hasHeightForWidth())
         self.pushButton_Find_2.setSizePolicy(sizePolicy1)
         self.pushButton_Find_2.setFont(font1)
-        self.comboBox_Atom_Ion = QComboBox(self.centralwidget)
-        self.comboBox_Atom_Ion.addItem("")
-        self.comboBox_Atom_Ion.addItem("")
-        self.comboBox_Atom_Ion.setObjectName(u"comboBox_Atom_Ion")
-        self.comboBox_Atom_Ion.setEnabled(True)
-        self.comboBox_Atom_Ion.setGeometry(QRect(21, 10, 140, 20))
-        sizePolicy1.setHeightForWidth(self.comboBox_Atom_Ion.sizePolicy().hasHeightForWidth())
-        self.comboBox_Atom_Ion.setSizePolicy(sizePolicy1)
-        self.comboBox_Atom_Ion.setFont(font1)
-        self.comboBox_Atom_Ion.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.comboBox_Atom_Ion.setFocusPolicy(Qt.FocusPolicy.TabFocus)
-        self.comboBox_Atom_Ion.setEditable(False)
+        self.comboBox_Atom = QComboBox(self.centralwidget)
+        self.comboBox_Atom.addItem("")
+        self.comboBox_Atom.addItem("")
+        self.comboBox_Atom.setObjectName(u"comboBox_Atom")
+        self.comboBox_Atom.setEnabled(True)
+        self.comboBox_Atom.setGeometry(QRect(21, 10, 140, 20))
+        sizePolicy1.setHeightForWidth(self.comboBox_Atom.sizePolicy().hasHeightForWidth())
+        self.comboBox_Atom.setSizePolicy(sizePolicy1)
+        self.comboBox_Atom.setFont(font1)
+        self.comboBox_Atom.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.comboBox_Atom.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.comboBox_Atom.setEditable(False)
         self.pushButton_atomic_kinetics = QPushButton(self.centralwidget)
         self.pushButton_atomic_kinetics.setObjectName(u"pushButton_atomic_kinetics")
         self.pushButton_atomic_kinetics.setGeometry(QRect(154, 310, 110, 20))
@@ -960,7 +962,7 @@ class Ui_MainWindow(object):
         self.lineEdit_Number_of_magnets.raise_()
         self.lineEdit_Power_laser.raise_()
         self.pushButton_Find_2.raise_()
-        self.comboBox_Atom_Ion.raise_()
+        self.comboBox_Atom.raise_()
         self.pushButton_atomic_kinetics.raise_()
         self.dSP_V_1.raise_()
         self.dSP_V_2.raise_()
@@ -1053,7 +1055,7 @@ class Ui_MainWindow(object):
         
         # 1. Define the manual list of the top controls in order
         tab_chain = [
-            self.comboBox_Atom_Ion,
+            self.comboBox_Atom,
             self.pushButton_Update,
             self.lineEdit_Number_of_magnets,
             self.lineEdit_Power_laser,
@@ -1104,22 +1106,27 @@ class Ui_MainWindow(object):
         self.label_Number_of_magnets.setText(QCoreApplication.translate("MainWindow", u"Number of magnets              [4-20]", None))
         self.label_Power_laser.setText(QCoreApplication.translate("MainWindow", u"Power of the laser (mW)  [1-1000]", None))
         self.pushButton_Find_2.setText(QCoreApplication.translate("MainWindow", u"Optimize", None))
-        self.comboBox_Atom_Ion.setItemText(0, QCoreApplication.translate("MainWindow", u"87Sr", None))
-        self.comboBox_Atom_Ion.setItemText(1, QCoreApplication.translate("MainWindow", u"171Yb", None))
+        self.comboBox_Atom.setItemText(0, QCoreApplication.translate("MainWindow", u"87Sr", None))
+        self.comboBox_Atom.setItemText(1, QCoreApplication.translate("MainWindow", u"171Yb", None))
+        self.comboBox_Atom.setItemText(2, QCoreApplication.translate("MainWindow", u"199Hg", None))
+        self.comboBox_Atom.setItemText(3, QCoreApplication.translate("MainWindow", u"88Sr", None))
+        self.comboBox_Atom.setItemText(4, QCoreApplication.translate("MainWindow", u"174Yb", None))
+        self.comboBox_Atom.setItemText(5, QCoreApplication.translate("MainWindow", u"111Cd", None))
+        self.comboBox_Atom.setItemText(6, QCoreApplication.translate("MainWindow", u"24Mg", None))
         # Add more elements to combo box; need to include their specific data in config.ini section [atomic_parameter_XXX]
-        #self.comboBox_Atom_Ion.setItemText(2, QCoreApplication.translate("MainWindow", u"88Sr", None))
-        #self.comboBox_Atom_Ion.setItemText(3, QCoreApplication.translate("MainWindow", u"40Ca", None))
+        #self.comboBox_Atom.setItemText(2, QCoreApplication.translate("MainWindow", u"88Sr", None))
+        #self.comboBox_Atom.setItemText(3, QCoreApplication.translate("MainWindow", u"40Ca", None))
         # ALSO NEED modification of function atomic_parameters(self) in ZeemanAPP script
 
-        self.comboBox_Atom_Ion.setCurrentText(QCoreApplication.translate("MainWindow", u"87Sr", None))
+        self.comboBox_Atom.setCurrentText(QCoreApplication.translate("MainWindow", u"87Sr", None))
         self.pushButton_atomic_kinetics.setText(QCoreApplication.translate("MainWindow", u"Atoms kinetics", None))
         # self.label_logo_2.setText("")
         # self.label_logo_1.setText("")
         self.label_zs.setText(QCoreApplication.translate("MainWindow", u"Deceleration length (cm)   [10-50]", None))
         self.label_zs_2.setText(QCoreApplication.translate("MainWindow", u"Capture velocity (m/s)     [100-800] ", None))
         self.label_zs_3.setText(QCoreApplication.translate("MainWindow", u"Final velocity (m/s)             [0-100] ", None))
-        self.label_zs_4.setText(QCoreApplication.translate("MainWindow", u"Detuning (MHz)           -[100-1000]", None))
-        self.label_zs_5.setText(QCoreApplication.translate("MainWindow", u"Beam diameter (mm)          [1-50]", None))
+        self.label_zs_4.setText(QCoreApplication.translate("MainWindow", u"Detuning (MHz)            -[100-1000]", None))
+        self.label_zs_5.setText(QCoreApplication.translate("MainWindow", u"Beam waist radius (mm)     [1-50]", None))
         self.label_zs_6.setText(QCoreApplication.translate("MainWindow", u"Magnet diameter (mm)      [1-100]", None))
         self.label_zs_7.setText(QCoreApplication.translate("MainWindow", u"Magnet height (mm)             [1-30]", None))
         self.label_zs_9.setText(QCoreApplication.translate("MainWindow", u"Remanence (mT)            [100-3000]", None))

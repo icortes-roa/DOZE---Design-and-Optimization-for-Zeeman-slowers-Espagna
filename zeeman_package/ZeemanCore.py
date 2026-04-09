@@ -13,8 +13,8 @@ import magpylib as magpy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.rcParams['font.family'] = 'sans-serif'
-matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Verdana', 'sans-serif']
+# matplotlib.rcParams['font.family'] = 'serif'
+# matplotlib.rcParams['font.serif'] = ['STIXGeneral']
 
 from scipy.spatial.transform import Rotation as R
 import sympy as sym
@@ -25,6 +25,32 @@ from datetime import datetime as dtm
 
 from PyQt5.QtWidgets import QApplication
 
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Calibri']
+
+plt.rcParams.update({
+    "font.family": "sans-serif",           # Usa fuentes con serifa
+    "font.sans-serif": ["Calibri"],    # La más parecida a Computer Modern
+    "mathtext.fontset": "stix",       # Coherencia matemática
+    # "font.size": 18,                  # Tamaño estándar para tesis/artículos
+    # "axes.titlesize": 20,
+    # "axes.labelsize": 16,
+    "axes.formatter.use_mathtext": True, # Números de los ejes en formato matemático
+    # "legend.fontsize": 16,
+    "legend.frameon": False,          # Quita el recuadro de la leyenda
+    "xtick.direction": "in",          # Ticks hacia adentro (estilo físico)
+    "ytick.direction": "in",
+    "figure.figsize": (10, 8),         # Tamaño por defecto en pulgadas
+    # "figure.dpi": 150 ,                # Nitidez en pantalla
+    # Fondo y Transparencia
+    "legend.frameon": True,       # Asegúrate de que el cuadro esté activo
+    "legend.framealpha": 1.0,      # 1.0 es totalmente opaco (blanco sólido)
+    "legend.facecolor": "white",   # Color del fondo del cuadro
+    
+    # Borde (Edge)
+    "legend.edgecolor": "black",   # Color del borde (puedes usar 'grey' para algo más suave)
+    "legend.fancybox": False,      # False para esquinas rectas (estilo paper), True para redondeadas
+    })
 
 # =============================================================================
 'PHYSICS CONSTANT'
@@ -55,7 +81,7 @@ class ZeemanCore(object):
         self.V_cap = 400           #Capture velocity [m/s]
         self.V_fin= 40         #Atoms velocity at the end of the slower [m/s]
 
-        self.w0 = 7e-3             #Minimun beam waist Hay que medir [m]
+        self.w0 = 7e-3             #Minimun beam waist radius Hay que medir [m]
 
         self.d0_Mhz = - 520        #Default detuning [MHz]
         self.Delta0 = self.d0_Mhz*2*pi*1e6   #Detuning [rad/s]
@@ -80,6 +106,7 @@ class ZeemanCore(object):
         self.Nt = 5e3  # Number of time steps for atoms kinetics simulation [a.u.]
         self.dt = 1e-6 # Time step resolution for atoms kinetics simulation [s]
         self.atoms_initial_z_position = -75  # z position where atoms are placed at t=0 of simulation time [mm]
+        self.dist_veloc_meas = 10.0 # z position after Zeeman slower exit where atoms velocity is measured [cm]
 
         self.m = 87.62*1.66e-27         # Atom mass [kg] (initialized: Strontium-87)
         self.WL_ge = 4.6086212862e-07   # Atom transition wavelength [m] (typically 1S0-1P1 blue Doppler cooling)
@@ -129,6 +156,12 @@ class ZeemanCore(object):
         
         self.iterations_max=50
         
+        # self.graph_fontsize='small'
+        
+        self.title_size = 16
+        self.others_size = 14
+        self.tick_size = 12
+        
         self.test = False                
         print('<<-- FINISHED Zeeman Core __init__()')
         
@@ -175,6 +208,7 @@ class ZeemanCore(object):
         self.ax_magnets = ax_2
         self.canvas_plot = canvas
         self.fig_plot = self.canvas_plot.fig
+        # print('titlesize ', self.title_size)
         if self.test==True: print('<<-- FINISHED Zeeman Core create_subplots()')
             
     
@@ -338,25 +372,29 @@ class ZeemanCore(object):
         # In the top graphics, the B_field
         self.current_B()
         self.ax_B.plot(self.z_full*1000,self.By_ideal_full,label='B$_{y}$ ideal',color='grey',alpha=0.5)
-        self.ax_B.plot(self.z_full*1000,self.By_current_full,label='B$_{y}$ simulated',color='green')
-        self.ax_B.axhline(y=0,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.25)
-        self.ax_B.legend(loc='upper left') 
+        self.ax_B.plot(self.z_full*1000,self.By_current_full,label='B$_{y}$ magnets generated',color='green')
+        self.ax_B.axhline(y=0,xmin=0,xmax=10,linestyle='dotted', color='gray', linewidth=0.25)
+        self.ax_B.legend(loc='upper left',fontsize=self.others_size)
+        print('Others size ', self.others_size)
+        
 
         # In the bottom graphics, the magnets position
-        self.ax_B.set_ylabel('Magnetic Field (mT)')
-        plt.xlabel('Z-Distance (mm)')
-        self.ax_magnets.axhline(y=0,xmin=0,xmax=50,linestyle='dashed', color='gray', linewidth=1)
-        self.ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.5)
-        self.ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.5)
-        self.ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.1, lw=0)
-        self.ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)')
+        self.ax_B.set_ylabel('Magnetic Field (mT)',fontsize=self.others_size)
+        plt.xlabel('Z-Distance (mm)',fontsize=self.others_size)
+        self.ax_magnets.axhline(y=0,xmin=0,xmax=1,linestyle='dashed', color='gray', linewidth=1)
+        # self.ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        # self.ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        # self.ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.1, lw=0)
+        self.ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)',fontsize=self.others_size)
+        
+
         
         # Also the vertical lines where magnets center are    
         for i in np.arange(0,(self.Npm)+1,1):
             if i==(self.zero_cross+1):
                 pass
             else:
-                line_ax_B=self.ax_B.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=50,linestyle='dotted', color='gray', linewidth=0.5)
+                line_ax_B=self.ax_B.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=1,linestyle='dotted', color='gray', linewidth=0.5)
                 self.magnet_lines_ax_B[i]=line_ax_B
                 span_ax_B=self.ax_B.axvspan(self.magnets[0][i].position[2]-self.size_mag[0]/2,self.magnets[0][i].position[2]+self.size_mag[0]/2, color='gray', alpha=0.1, lw=0)  
                 self.magnet_spans_ax_B[i]=span_ax_B
@@ -372,7 +410,7 @@ class ZeemanCore(object):
                 pass
             else:
                 magnet1,magnet2=[],[]
-                line_ax_magnets=self.ax_magnets.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=50,linestyle='dotted', color='gray', linewidth=0.5)
+                line_ax_magnets=self.ax_magnets.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=1,linestyle='dotted', color='gray', linewidth=0.5)
                 self.magnet_lines_ax_magnets[i]=line_ax_magnets
                 span_ax_magnets=self.ax_magnets.axvspan(self.magnets[0][i].position[2]-self.size_mag[0]/2,self.magnets[0][i].position[2]+self.size_mag[0]/2, color='gray', alpha=0.1, lw=0)
                 self.magnet_spans_ax_magnets[i]=span_ax_magnets
@@ -553,7 +591,192 @@ class ZeemanCore(object):
         self.initial_plot(1000*self.z,self.By_ideal,self.By_current)
         if self.test==True: print('<<-- FINISHED Zeeman Core preliminary_position()')
 
+    
     def optimize_magnets(self,displ,sign,rev,iters,progress_callback=None):
+        """ 
+        This function moves magnets back and forth vertically to make generated B 
+        as closer as possible to ideal B
+        """      
+        if self.test==True: print('-->>Entering Zeeman Core optimize_magnets()')
+        print('-------------------OPTIMISING--------------------------')
+        print('--- Moving magnets each ', displ,'mm')
+        if sign>0:
+            print('--- Default direction separating from atomic axis...')
+        else:
+            print('--- Default direction aproximating to atomic axis...')
+        if rev==False:
+            print('--- Staring by magnets closer to the oven...')
+        else:
+            print('--- Staring by magnets farther from the oven...')
+        
+        print('--- Number of iterations finding no improvement...', iters)
+        print('--------------------------------------------------------')
+        
+        # Minimum number of iterations and separation distance from first
+        # and last magnet from their closest one
+        iter_mins=0
+
+        iterations=0
+        optimized=False
+        
+        # This array contains two deviations: 0 minimum obtained and 1 present one
+        B_tbo_act=self.col.getB(1000*self.z_axis)
+        desv=np.linalg.norm(B_tbo_act[:,1]-self.By_ideal)*np.ones(2)
+        
+        # This array stores the positions where B has been optimum at present time
+        pos_mins=np.zeros(self.Npm+1,dtype='float')
+        for n in np.arange(0,self.Npm+1,1):
+            pos_mins[n]=self.magnets[0][n].position[1]
+
+        # We decide here to move first initial or last magnets
+        if rev==True:
+            orden=np.arange(int(len(self.col)/2)-1,-1,-1)
+        else:
+            orden=np.arange(0,self.Npm+1,1)
+
+        for n in orden:
+            pos_mins[n]=self.magnets[0][n].position[1]
+        
+        
+        
+        # While we don't get an optimal position, we keep on moving magnets
+        while (optimized==False) and (iterations < self.iterations_max): 
+            B_tbo_act=self.col.getB(1000*self.z_axis)
+            desv[1]=np.linalg.norm(B_tbo_act[:,1]-self.By_ideal)
+            for i in np.arange(0,int(len(self.col)/2),1):
+                fact=int(self.B_points/self.Npm)
+                if i == 0:
+                    inf_zone=slice((i)*fact,(i+1)*fact)
+                if i == self.Npm:
+                    inf_zone=slice((i-1)*fact,(i)*fact)
+                else:
+                    inf_zone=slice((i-1)*fact,(i+1)*fact)
+                # We pass the magnets over zero_cross
+                if (i==self.zero_cross+1):
+                    pass
+                # We move the rest
+                else:
+                    B_tbo_act=self.col.getB(1000*self.z_axis)
+                    # We try separating (or joining, depending on "sign").
+                    self.separate(i,sign*displ)
+                    # We stop if the magnet is too close to the vacuum tube
+                    if self.magnets[0][i].position[1]<self.min_magnet_distance:
+                        self.magnets[0][i].position[1]=self.min_magnet_distance
+                        self.magnets[1][i].position[1]=-self.min_magnet_distance
+                    # First two magnets are moved together (explanation on user manual)
+                    if i==1:
+                        self.magnets[0][0].position[1]=self.magnets[0][1].position[1]-self.sep_ini
+                        self.magnets[1][0].position[1]=self.magnets[1][1].position[1]+self.sep_ini
+                    # Last two magnets are moved together (explanation on user manual)
+                    if i==self.Npm-1:
+                        self.magnets[0][self.Npm].position[1]=self.magnets[0][self.Npm-1].position[1]-self.sep_last
+                        self.magnets[1][self.Npm].position[1]=self.magnets[1][self.Npm-1].position[1]+self.sep_last
+                    new_B_tbo=self.col.getB(1000*self.z_axis)
+                    # If we get no improvements...
+                    if round(np.linalg.norm(B_tbo_act[inf_zone,1]-self.By_ideal[inf_zone]),2) < round(np.linalg.norm(new_B_tbo[inf_zone,1]-self.By_ideal[inf_zone]),2):
+                        # We move in the opposite direction
+                        self.aproximate(i,2*sign*displ)
+                        if self.magnets[0][i].position[1]<self.min_magnet_distance:
+                             self.magnets[0][i].position[1]=self.min_magnet_distance
+                             self.magnets[1][i].position[1]=-self.min_magnet_distance
+                        # First two magnets are moved together (explanation on user manual)
+                        if i==1:
+                            if self.magnets[0][1].position[1]-self.sep_ini >= self.min_magnet_distance:
+                                self.magnets[0][0].position[1]=self.magnets[0][1].position[1]-self.sep_ini
+                                self.magnets[1][0].position[1]=self.magnets[1][1].position[1]+self.sep_ini
+                            else:
+                                self.magnets[0][0].position[1]=self.min_magnet_distance
+                                self.magnets[1][0].position[1]=-self.min_magnet_distance
+                        # Last two magnets are moved together (explanation on user manual)
+                        if i==self.Npm-1:
+                            if self.magnets[0][self.Npm-1].position[1]-self.sep_last >= self.min_magnet_distance:
+                                self.magnets[0][self.Npm].position[1]=self.magnets[0][self.Npm-1].position[1]-self.sep_last
+                                self.magnets[1][self.Npm].position[1]=self.magnets[1][self.Npm-1].position[1]+self.sep_last
+                            else:
+                                self.magnets[0][self.Npm].position[1]=self.min_magnet_distance
+                                self.magnets[1][self.Npm].position[1]=-self.min_magnet_distance
+                        new_B_tbo=self.col.getB(1000*self.z_axis)
+                        if round(np.linalg.norm(B_tbo_act[inf_zone,1]-self.By_ideal[inf_zone]),2) < round(np.linalg.norm(new_B_tbo[inf_zone,1]-self.By_ideal[inf_zone]),2):
+                            # If we get no improvements we leave magnets where they were initially.
+                            self.separate(i,sign*displ)
+                            if self.magnets[0][i].position[1]<self.min_magnet_distance:
+                               self.magnets[0][i].position[1]=self.min_magnet_distance
+                               self.magnets[1][i].position[1]=-self.min_magnet_distance
+                           # First two magnets are moved together (explanation on user manual)
+                            if i==1:
+                               self.magnets[0][0].position[1]=self.magnets[0][1].position[1]-self.sep_ini
+                               self.magnets[1][0].position[1]=self.magnets[1][1].position[1]+self.sep_ini
+                           # Last two magnets are moved together (explanation on user manual)
+                            if i==self.Npm-1:    
+                               self.magnets[0][self.Npm].position[1]=self.magnets[0][self.Npm-1].position[1]-self.sep_last
+                               self.magnets[1][self.Npm].position[1]=self.magnets[1][self.Npm-1].position[1]+self.sep_last
+                  
+            new_B_tbo = self.col.getB(1000*self.z_axis)
+            
+            # We update the graphs
+            self.By_current = new_B_tbo[:,1]
+            self.plot_data()
+
+            # We calculate the new deviation from the ideal B_field
+            desv[1] = np.linalg.norm(new_B_tbo[:,1]-self.By_ideal)
+            
+            # If deviation is better than previous one, we update it and reset the counter.
+            if round(desv[1],2) < round(desv[0],2):
+                desv[0]=desv[1]
+                iter_mins=0
+                # We save the magnets positions wehere minimum deviation was found.
+                for n in np.arange(0,self.Npm+1,1):
+                    if self.magnets[0][n].position[1] >= self.min_magnet_distance:
+                        pos_mins[n]=self.magnets[0][n].position[1]
+                    else:
+                        pos_mins[n]=self.min_magnet_distance
+            # Otherwise, we add 1 to the iterations chances we couldn't improve
+            else:
+                iter_mins+=1
+            
+            # If we deplete the chances to look for an improvement, we consider we are optimum
+            if iter_mins==iters:
+                optimized=True
+                for n in np.arange(0,self.Npm+1,1):
+                    if pos_mins[n] >= self.min_magnet_distance:
+                        self.magnets[0][n].position[1]=pos_mins[n]
+                        self.magnets[1][n].position[1]=-pos_mins[n]
+                    else:
+                        self.magnets[0][n].position[1]=self.min_magnet_distance
+                        self.magnets[1][n].position[1]=-self.min_magnet_distance
+            print('IterTOT#', iterations, ' || IterSeries', iter_mins, '|| Desv {:.2f}'.format(desv[1]))
+             
+            iterations+=1
+            
+            if progress_callback is not None:
+                # Limit self.iterations_max
+                current_percent = min(100, 100*iterations/self.iterations_max)
+                progress_callback(current_percent)
+            
+            if self.break_simulations == True:
+                if self.test: print("Cancellation detected: Restoring magnets to last stable position...")
+                
+                # Restore magnet to last previous valid position
+                for n in np.arange(0, self.Npm + 1, 1):
+                    if pos_mins[n] >= self.min_magnet_distance:
+                        self.magnets[0][n].position[1] = pos_mins[n]
+                        self.magnets[1][n].position[1] = -pos_mins[n]
+                    else:
+                        self.magnets[0][n].position[1]=self.min_magnet_distance
+                        self.magnets[1][n].position[1]=-self.min_magnet_distance
+                # Recalculate B field with restored positions
+                self.By_current = self.col.getB(1000 * self.z_axis)[:, 1]
+                return
+
+        # We update the graphics
+        self.By_current = new_B_tbo[:,1]
+        self.plot_data()
+       
+        if self.test==True: print('<<-- FINISHED Zeeman Core optimize_magnets()')
+         
+        return True
+
+    def optimize_magnets_old(self,displ,sign,rev,iters,progress_callback=None):
         """ 
         This function moves magnets back and forth vertically to make generated B 
         as closer as possible to ideal B
@@ -808,35 +1031,36 @@ class ZeemanCore(object):
         # We create the figure
         now=dtm.now()
         time_stamp = now.strftime("%d-%m-%Y %H:%M:%S")
-        title='By-field optimized ('+str(time_stamp)+')'
+        # title='B$_{y}$ field optimized'#' ('+str(time_stamp)+')'
+        title = 'Magnetic field profile'
         plt.ion()
-        self.fig_2D=plt.figure(title,figsize=(9,10),layout='constrained')
-        self.fig_2D.suptitle(title)
+        self.fig_2D=plt.figure(title,figsize=(9,10))
+        self.fig_2D.suptitle(title,fontsize=self.title_size)
         # We create 2 subplots: for the B_field and for the magnets positions
         self.subplot_2D_ax_B,self.subplot_2D_ax_magnets=self.fig_2D.subplots(nrows=2,sharex=True)
         
         # We draw the ideal and current B field in the upper subplot
-        self.subplot_2D_ax_B.plot(x,y1,label='B_ideal',color='grey',alpha=0.5)
-        self.subplot_2D_ax_B.plot(x,y2,label='B_calculated',color='green')
-        self.subplot_2D_ax_B.axhline(y=0,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.25)        
+        self.subplot_2D_ax_B.plot(x,y1,label='B$_{y}$ ideal',color='grey',alpha=0.5)
+        self.subplot_2D_ax_B.plot(x,y2,label='B$_{y}$ magnets generated',color='green')
+        self.subplot_2D_ax_B.axhline(y=0,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.25)        
         self.subplot_2D_ax_B.autoscale_view()
-        self.subplot_2D_ax_B.set_ylabel('Magnetic Field (mT)')
-        self.subplot_2D_ax_B.legend(loc='upper left')
-        plt.xlabel('Z-Distance (mm)')
+        self.subplot_2D_ax_B.set_ylabel('Magnetic Field (mT)',fontsize=self.others_size)
+        self.subplot_2D_ax_B.legend(loc='upper left',fontsize=self.others_size)
+        plt.xlabel('Z-Distance (mm)',fontsize=self.others_size)
         
         # We draw the magnets positions in the bottom subplot
-        self.subplot_2D_ax_magnets.axhline(y=0,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.5)
-        self.subplot_2D_ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.5)
-        self.subplot_2D_ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=50,linestyle='dotted', color='gray', linewidth=0.5)
-        self.subplot_2D_ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.2, lw=0)
-        self.subplot_2D_ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)')
+        self.subplot_2D_ax_magnets.axhline(y=0,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        # self.subplot_2D_ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        # self.subplot_2D_ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        # self.subplot_2D_ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.2, lw=0)
+        self.subplot_2D_ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)',fontsize=self.others_size)
         
         # vertical lines are drawed where the magnets are positioned   
         for i in np.arange(0,self.Npm+1,1):
             if i==(self.zero_cross+1):
                 pass
             else:
-                self.subplot_2D_ax_B.axvline(x=magnets[0][i].position[2],ymin=0,ymax=50,linestyle='dotted', color='gray', linewidth=0.5)
+                self.subplot_2D_ax_B.axvline(x=magnets[0][i].position[2],ymin=0,ymax=1,linestyle='dotted', color='gray', linewidth=0.5)
                 self.subplot_2D_ax_B.axvspan(magnets[0][i].position[2]-self.size_mag[0]/2,magnets[0][i].position[2]+self.size_mag[0]/2, color='gray', alpha=0.1, lw=0)  
         
         # We create a list to draw rectangles for each magnet
@@ -899,12 +1123,17 @@ class ZeemanCore(object):
         self.subplot_2D_ax_B.margins(0.1, 0.2)       
         self.subplot_2D_ax_magnets.margins(0.1,0.2)
         # Recalculate limits
+
         self.subplot_2D_ax_magnets.relim() 
         self.subplot_2D_ax_magnets.autoscale_view()
 
         # Adjust top graph
         self.subplot_2D_ax_B.relim()
         self.subplot_2D_ax_B.autoscale_view()
+        
+        # self.subplot_2D_ax_B.tick_params(axis='both', which='major', labelsize=14)
+        # self.subplot_2D_ax_magnets.tick_params(axis='both', which='major', labelsize=14)
+
         self.fig_2D.show()
         if self.test==True: print('<<-- FINISHED Zeeman Core draw_2D()')
 
@@ -919,6 +1148,7 @@ class ZeemanCore(object):
 
         self.current_B()
         self.draw_2D(1000*self.z,self.By_ideal,self.By_current,self.magnets)
+        print('z size =', np.size(self.z), 'By_ideal_size =', np.size(self.By_ideal), 'By_current_size =', np.size(self.By_current))
 
         # We add some points before and after the braking zone (0-self.LZ)
         Bz_ideal0s=np.append(np.zeros(self.B_points_additional),self.By_ideal)
@@ -965,13 +1195,13 @@ class ZeemanCore(object):
             if i==(self.zero_cross+1):
                 pass
             else:
-                self.subplot_2D_ax_magnets.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=50,linestyle='dashed', color='gray', linewidth=0.5,zorder=1)
+                self.subplot_2D_ax_magnets.axvline(x=self.magnets[0][i].position[2],ymin=0,ymax=1,linestyle='dashed', color='gray', linewidth=0.5,zorder=1)
                 self.subplot_2D_ax_magnets.axvspan(self.magnets[0][i].position[2]-self.size_mag[0]/2,self.magnets[0][i].position[2]+self.size_mag[0]/2, color='gray', alpha=0.1, lw=0,zorder=0)  
         for i in range(0,self.Npm+1,1):
             if i==self.zero_cross+1:
                 pass
             else:
-                self.subplot_2D_ax_magnets.text(self.magnets[0][i].position[2],0,round(self.magnets[0][i].position[1],1),color='red',fontsize=14,horizontalalignment='center')
+                self.subplot_2D_ax_magnets.text(self.magnets[0][i].position[2],0,round(self.magnets[0][i].position[1],1),color='red',fontsize=self.tick_size,horizontalalignment='center')
                 if self.magnets[0][i].magnetization[2]>0:
                     self.subplot_2D_ax_magnets.add_patch(patches.Rectangle((self.magnets[0][i].position[2]-self.size_mag[0]/2,self.magnets[0][i].position[1]-self.size_mag[1]/2), self.size_mag[0], self.size_mag[1]/2, facecolor='red',edgecolor=None,zorder=2))
                     self.subplot_2D_ax_magnets.add_patch(patches.Rectangle((self.magnets[0][i].position[2]-self.size_mag[0]/2,self.magnets[0][i].position[1]), self.size_mag[0],self.size_mag[1]/2, facecolor='blue',edgecolor=None,zorder=2))
@@ -997,6 +1227,13 @@ class ZeemanCore(object):
         # Adjust top subplot
         self.subplot_2D_ax_B.relim()
         self.subplot_2D_ax_B.autoscale_view()
+        
+        for ax in [self.subplot_2D_ax_B, self.subplot_2D_ax_magnets]:
+            ax.tick_params(axis='both', labelsize=self.tick_size)
+            # Opcional: Esto asegura que el layout no se rompa al agrandar la fuente
+        
+        # self.fig_2D.tight_layout()
+        
         self.fig_2D.show()
         
         if self.test==True: print('<<-- FINISHED Zeeman Core B_field_2D_lines_drawing()')
@@ -1013,8 +1250,8 @@ class ZeemanCore(object):
         self.current_B() # Update field values
         
         # We create the array of velocities
-        prop = 1 / (self.N_vel - 1)
-        vector = np.linspace(prop, 1 + prop, self.N_vel)
+        prop = 1 / (self.N_vel - 2)
+        vector = np.linspace(prop, 1 + 2*prop, self.N_vel)
         self.Vz = np.round(self.V_cap * vector)
         Vr = np.zeros(len(self.Vz))  # No radial speed: Vr = 0
         theta = np.zeros(len(self.Vz))  # No azimuthal speed: Vtheta = 0
@@ -1123,13 +1360,16 @@ class ZeemanCore(object):
         # Graphics creation
         now=dtm.now()
         time_stamp = now.strftime("%d-%m-%Y %H:%M:%S")
-        title='Atoms deceleration in a Zeeman Slower ('+str(time_stamp)+')'
+        title='Atoms deceleration in a Zeeman Slower'#' ('+str(time_stamp)+')'
         plt.ion()
+
         self.fig_vels=plt.figure(title,figsize=(16,9))
-        self.fig_vels.suptitle(title)
-        self.fig_vels.text(x=0.5,y=0.93,s='P = ' + str(int(self.P*1e3)) + ' mW  |  Vcap = ' + str(self.V_cap) + ' m/s  |  Vfin = ' + str(self.V_fin) + ' m/s  |  d0 = ' + str(self.d0_Mhz) + ' MHz',ha='center',fontsize=10,fontstyle='italic')
+
+
+        self.fig_vels.suptitle(title,fontsize=self.title_size)
+        self.fig_vels.text(x=0.5,y=0.91,s='\n \n P = ' + str(int(self.P*1e3)) + ' mW  |  V$_{\mathrm{cap}}$ = ' + str(self.V_cap) + ' m/s  |  V$_{\mathrm{fin}}$ = ' + str(self.V_fin) + ' m/s  |  d$_{\mathrm{0}}$ = ' + str(self.d0_Mhz) + ' MHz  |  $w_{\mathrm{0}}$ = ' + str (1e3*self.w0) + ' mm',ha='center',fontstyle='italic',fontsize=self.others_size)
         subplots_vels=self.fig_vels.subplots(nrows=1) 
-    
+           
         END = round(0.99 * self.Nt)
         
         for k in range(0, self.N):
@@ -1137,18 +1377,20 @@ class ZeemanCore(object):
         
         
         try:
-            index_end_speed_array = np.where(self.Atoms_position[len(self.Vz)-2,:,2]>self.LZ*1.2)
+            # index_end_speed_array = np.where(self.Atoms_position[len(self.Vz)-3,:,2]>self.LZ*1.2)
+            index_end_speed_array = np.where(self.Atoms_position[len(self.Vz)-3,:,2]>self.LZ+self.dist_veloc_meas/100)
             index_end_speed = int(index_end_speed_array[0][0])            
+            print(self.LZ, +self.dist_veloc_meas)
         except:
-            index_end_speed=len(self.Atoms_position[len(self.Vz)-2,:,2])-2
+            index_end_speed=len(self.Atoms_position[len(self.Vz)-3,:,2])-2
         
         if self.test == True: print ('Index end speed ', index_end_speed)
-        if self.test == True: print ('Position end speed ',1e3*self.Atoms_position[len(self.Vz)-2,index_end_speed,2]*0.95)
-        if self.test == True: print('y_pos_text', self.Atoms_speed[len(self.Vz)-2,index_end_speed,2])
+        if self.test == True: print ('Position end speed ',1e3*self.Atoms_position[len(self.Vz)-3,index_end_speed,2]*0.95)
+        if self.test == True: print('y_pos_text', self.Atoms_speed[len(self.Vz)-3,index_end_speed,2])
         
-        x_result=1e3*self.Atoms_position[len(self.Vz)-2,index_end_speed,2]
-        y_result=self.Atoms_speed[len(self.Vz)-2,index_end_speed,2]
-        subplots_vels.scatter(x=1e3*self.Atoms_position[len(self.Vz)-2,index_end_speed,2],y=self.Atoms_speed[len(self.Vz)-2,index_end_speed,2], 
+        x_result=1e3*self.Atoms_position[len(self.Vz)-3,index_end_speed,2]
+        y_result=self.Atoms_speed[len(self.Vz)-3,index_end_speed,2]
+        subplots_vels.scatter(x=1e3*self.Atoms_position[len(self.Vz)-3,index_end_speed,2],y=self.Atoms_speed[len(self.Vz)-3,index_end_speed,2], 
                      marker='x',  
                      s=300,       
                      color='red',  
@@ -1159,20 +1401,23 @@ class ZeemanCore(object):
             p=-1.5*(self.Vz[-1]-self.Vz[-2])
         else:
             p=0.75*(self.Vz[-1]-self.Vz[-2])
-        subplots_vels.text(x=x_result-self.LZ*100,y=y_result+p,
-                                s='  @ X-mark distance,\n atoms born @ '+str(self.Vz[-2])+' m/s: \n have speed of ' + str(np.round(self.Atoms_speed[len(self.Vz)-2, index_end_speed, 2], 1)) + ' m/s ', color='red')
-        subplots_vels.set_ylabel('Atoms Speed (m/s)',ha='center',va='center')
-        subplots_vels.set_xlabel('Z-Distance (mm)')
+        subplots_vels.text(x=x_result-self.LZ*210,y=y_result+p,
+                                s='  @ X-mark distance,\n atoms born @ '+str(self.Vz[-3])+' m/s \n have velocity ' + str(np.round(self.Atoms_speed[len(self.Vz)-3, index_end_speed, 2], 1)) + ' m/s ', color='red',fontsize=self.others_size)
+        subplots_vels.set_ylabel('Atomic longitudunal velocity (m/s) \n',ha='center',va='center',fontsize=self.others_size)
+        subplots_vels.set_xlabel('Z-Distance (mm)',fontsize=self.others_size)
         subplots_vels.axvline(x=0, linestyle='dashed', color='gray', linewidth=1, zorder=1)
         subplots_vels.axvline(x=round(self.LZ * 1000), linestyle='dashed', color='gray', linewidth=1, zorder=1)
-        subplots_vels.legend(loc='upper right', ncols=int(len(self.Vz)/3))
-        if np.min(self.Atoms_speed[len(self.Vz)-2,index_end_speed,2]) > 0:
-            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+        subplots_vels.legend(loc='upper right', ncols=int(len(self.Vz)/4),fontsize=self.others_size)
+
+        if np.min(self.Atoms_speed[len(self.Vz)-3,index_end_speed,2]) > 0:
+            # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
         else:
-            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+            # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
         y2_axis = self.fig_vels.axes[0].twinx()
-        y2_axis.plot(1000 * self.z_axis_full[:, 2], self.By_ideal_full, linestyle='dashed', alpha=0.5, label='Bz_ideal',linewidth=0.5)
-        y2_axis.plot(1000 * self.z_axis_full[:, 2], B, alpha=0.5, color='gray', label='Bz_MagnetsGenerated',linewidth=0.5)
+        # y2_axis.plot(1000 * self.z_axis_full[:, 2], self.By_ideal_full, linestyle='dashed', alpha=0.5, label='By_ideal',linewidth=0.5)
+        y2_axis.plot(1000 * self.z_axis_full[:, 2], B, alpha=0.5, color='gray', label='B$_{y}$ magnets generated',linewidth=0.5)
         y2_axis.plot(1000 * self.z_axis_full[:, 2], -B, alpha=0.5, color='gray',linewidth=0.5)
         
         
@@ -1199,14 +1444,15 @@ class ZeemanCore(object):
         y1_range=y1_lim_top-y1_lim_bottom
        
         # Looking for values of V_cap at positions 0 & LZ
-        y1_top_list=np.where(self.Atoms_position[len(self.Vz)-2,:,2]>0)
+        y1_top_list=np.where(self.Atoms_position[len(self.Vz)-3,:,2]>0)
         y1_top_index=y1_top_list[0][0]
-        y1_bottom_list=np.where(self.Atoms_position[len(self.Vz)-2,:,2]>self.LZ)
+        y1_bottom_list=np.where(self.Atoms_position[len(self.Vz)-3,:,2]>self.LZ)
         y1_bottom_index=y1_bottom_list[0][0]
-        y1_top=self.Atoms_speed[len(self.Vz)-2,y1_top_index,2]
-        y1_bottom=self.Atoms_speed[len(self.Vz)-2,y1_bottom_index,2]
+        y1_top=self.Atoms_speed[len(self.Vz)-3,y1_top_index,2]
+        y1_bottom=self.Atoms_speed[len(self.Vz)-3,y1_bottom_index,2]
         y1_subrange=y1_top-y1_bottom
         offset_y1=(y1_lim_top-y1_top)/y1_range
+        
        
         #Proportion window height Vs max_min speeds
         prop_range_subrange= y1_range/y1_subrange
@@ -1225,14 +1471,15 @@ class ZeemanCore(object):
         
         # Impose calculated limits to match B and velocities slope
         subplots_vels.set_ylim([y1_lim_bottom,y1_lim_top])
+        subplots_vels.tick_params(axis='both', which='major', labelsize=self.tick_size)
         print('Vels lims', [y1_lim_bottom,y1_lim_top])
         print('Vels bottom top', [y1_bottom,y1_top])
         y2_axis.set_ylim([y2_lim_bottom,y2_lim_top])
         print('B bottom top',[y2_bottom,y2_top])
         print('B lims',[y2_lim_bottom,y2_lim_top])
         
-        y2_axis.set_ylabel('Magnetic Field (mT)', color='grey')
-        y2_axis.legend(loc='upper left', ncols=1)
+        y2_axis.set_ylabel('Magnetic Field (mT)', color='grey',fontsize=self.others_size)
+        y2_axis.legend(loc='upper left', ncols=1,fontsize=self.others_size)
 
         self.fig_vels.show()
         if self.test==True: print('<<-- FINISHED Zeeman Core atomic_kinetics()')
