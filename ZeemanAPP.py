@@ -15,6 +15,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, Qt, QCoreApplication, QEvent, QThr
 from zeeman_package.ZeemanCore import ZeemanCore
 from PyQt5 import QtCore, QtWidgets # For the QMessageBox
 from PyQt5.QtGui import QIcon#  QIcon to laod icon 
+from PyQt5.QtGui import QPixmap # (Asegúrate de tener esto importado arriba)
 import numpy as np
 from configparser import ConfigParser  #Carga fichero ini
 #Time
@@ -67,6 +68,7 @@ class LabTweaksDialog(QDialog):
         # Buttons
         buttons = QHBoxLayout()
         self.btn_run = QPushButton("Run Kinetics")
+        
         self.btn_run.setStyleSheet("background-color: #a1d99b; font-weight: bold;")
         self.btn_cancel = QPushButton("Cancel")
         
@@ -195,6 +197,7 @@ class LoadingScreen(QWidget):
         self.layout.addWidget(self.frame)
         
         self.hide() # Hidden by default
+        
 
     def eventFilter(self, source, event):
         """
@@ -395,12 +398,12 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.ui.pushButton_2D_magnetic_field.hide()
         self.ui.pushButton_atomic_kinetics.hide()
         self.ui.pushButton_save_file.hide()
-        self.ui.pushButton_load_file.hide()
+        # self.ui.pushButton_load_file.hide()
         self.ui.pushButton_Update.hide()
         self.ui.pushButton_Update.setStyleSheet("background-color: #AFEEEE;")
                
         self.primer =True
-        self.test = False
+        self.test = True
         # Default value for Atom combo box
         self.search_Atom = '87Sr'
 
@@ -478,13 +481,39 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         # Optional: Loop back to start?
         # QWidget.setTabOrder(tab_chain[-1], tab_chain[0])
         
+        # --- CÓDIGO PARA FORZAR EL LOGO TOCK EN LA PARTE ALTA ---
+        
+        # 1. Aseguramos la ruta
+        ruta_logo = "TOCK_logo.png" # Usa tu función resource_path si la implementaste
+        
+        # 2. Rescatamos el label5 creado en ZeemanGUI y le cargamos la foto
+
+        
         self.draw_initial_logos()
+        
+        
+        self.ui.label_5.setPixmap(QPixmap(ruta_logo))
+        self.ui.label_5.setScaledContents(True)
+        
+        self.ui.label_5.setParent(self.ui.widget)
+        
+        # 3. Lo posicionamos a mano de forma absoluta. 
+        # X=800 (hacia la derecha, sobre la gráfica), Y=20 (pegado arriba). 
+        # 100, 100 son el ancho y alto. ¡Tendrás que jugar un poco con X e Y!
+        self.ui.label_5.setGeometry(800, 20, 110, 55)
+        
+        # 4. LAS LÍNEAS MÁGICAS: Lo traemos al frente de la gráfica y forzamos que se vea
+        self.ui.label_5.raise_()
+        self.ui.label_5.show()
+        
+        self.position_ini()
         
         print('<<--EXITING Zeeman APP __ini__')
         
     # ----------------------------------------------------------------------
     # 1. Helper Function (With forced transparency)
     # ----------------------------------------------------------------------
+       
     def place_centered_image(self, ax, filename, zoom=0.5):
         try:
             arr_img = mpimg.imread(filename)
@@ -533,63 +562,126 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.place_centered_image(self.pw.ax_B, 'logo.jpg', zoom=0.5) 
         self.place_centered_image(self.pw.ax_B1, 'DOZE.png', zoom=0.5)
         
+    def resizeEvent(self, event):
+        # Calls original event to relocate TOCK logo
+        super(app_gui, self).resizeEvent(event)
+        
+        # Checking the elements really exist
+        if hasattr(self, 'ui') and hasattr(self.ui, 'label_5') and hasattr(self.ui, 'widget'):
+            # We get logo and window size to maintain the aspect ratio
+            logo_width = self.ui.label_5.width()
+            widget_width = self.ui.widget.width()
+            
+            # Calculating the new coordinate
+            
+            x_center = int((widget_width - logo_width) / 2)
+            y_pos = 5  # Keeping vertical distance
+            
+            # Moving label to new position
+            self.ui.label_5.move(x_center, y_pos)
+    
     def break_simulations(self):
         self.zeeman.break_simulations = True
         
-    def manage_buttons_update_old(self):
-        '''
-            This function will show the update button and hide others to keep 
-            app flowing in proper order
-        '''
-        
-        sender = self.sender()
-        if sender:
-            print(f"DEBUG: manage_buttons_update llamado por: {sender.objectName()}")
-        else:
-            print("DEBUG: manage_buttons_update llamado manualmente")
-            
-        self.ui.pushButton_Update.show()
-        self.ui.pushButton_Update.setFocus()
-        
-        self.ui.pushButton_Find.hide()
-        self.ui.pushButton_Find_2.hide()
-        self.ui.pushButton_2D_magnetic_field.hide()
-        self.ui.pushButton_atomic_kinetics.hide()
-        self.ui.pushButton_save_file.hide()
      
+    # def manage_buttons_update(self):
+    #     '''
+    #     This function will show the update button. 
+    #     If magnets exist, it keeps other buttons visible to allow experimental tweaks.
+    #     '''
+    #     sender = self.sender()
+    #     if sender:
+    #         # Optional debug
+    #         pass
+            
+    #     self.ui.pushButton_Update.show()
+    #     # self.ui.pushButton_Update.setFocus() # Optional, sometimes annoying if typing
+        
+    #     # Check if we have an optimized magnetic field ready
+    #     if hasattr(self.zeeman, 'magnets') and self.zeeman.magnets is not None:
+    #         # Magnets exist -> Allow Simulation
+    #         self.ui.pushButton_Find.show()
+    #         self.ui.pushButton_Find_2.show()
+    #         self.ui.pushButton_2D_magnetic_field.show()
+    #         self.ui.pushButton_atomic_kinetics.show()
+    #         self.ui.pushButton_save_file.show()
+            
+    #         # Visual cue: Button stays green/active
+    #         self.ui.pushButton_atomic_kinetics.setEnabled(True)
+    #         self.ui.pushButton_atomic_kinetics.setStyleSheet("background-color: #a1d99b;")
+    #     else:
+    #         # No magnets -> Hide everything until Update is clicked
+    #         self.ui.pushButton_Find.hide()
+    #         self.ui.pushButton_Find_2.hide()
+    #         self.ui.pushButton_2D_magnetic_field.hide()
+    #         self.ui.pushButton_atomic_kinetics.hide()
+    #         self.ui.pushButton_save_file.hide()
+       
     def manage_buttons_update(self):
         '''
-        This function will show the update button. 
-        If magnets exist, it keeps other buttons visible to allow experimental tweaks.
+        Muestra el botón Update. 
+        Si el cambio es estructural, oculta TODOS los botones de simulación y cálculo.
+        Si es un ajuste experimental, permite verlos si ya existen imanes.
         '''
         sender = self.sender()
-        if sender:
-            # Optional debug
-            pass
-            
-        self.ui.pushButton_Update.show()
-        # self.ui.pushButton_Update.setFocus() # Optional, sometimes annoying if typing
         
-        # Check if we have an optimized magnetic field ready
-        if hasattr(self.zeeman, 'magnets') and self.zeeman.magnets is not None:
-            # Magnets exist -> Allow Simulation
-            self.ui.pushButton_Find.show()
-            self.ui.pushButton_Find_2.show()
-            self.ui.pushButton_2D_magnetic_field.show()
-            self.ui.pushButton_atomic_kinetics.show()
-            self.ui.pushButton_save_file.show()
-            
-            # Visual cue: Button stays green/active
-            self.ui.pushButton_atomic_kinetics.setEnabled(True)
-            self.ui.pushButton_atomic_kinetics.setStyleSheet("background-color: #a1d99b;")
+        # Widgets that may define physic geometry
+        structural_widgets = [
+            self.ui.lineEdit_Number_of_magnets,
+            self.ui.lineEdit_ZS,
+            self.ui.lineEdit_mag_D,
+            self.ui.lineEdit_mag_H,
+            self.ui.lineEdit_Length_apparatus,
+            self.ui.lineEdit_V_cap,
+            self.ui.lineEdit_V_sal
+        ]
+        
+        # Grupo de botones que dependen de que la estructura de imanes sea válida
+        calc_buttons = [
+            self.ui.pushButton_Find,
+            self.ui.pushButton_Find_2,
+            self.ui.pushButton_2D_magnetic_field,
+            self.ui.pushButton_atomic_kinetics, 
+            self.ui.pushButton_save_file
+        ]
+        
+        # Update buttons shows up if there is a change
+        self.ui.pushButton_Update.show()
+
+        if sender in structural_widgets:
+            # On structural change, buttons are hidden
+            for btn in calc_buttons:
+                btn.hide()
+        
         else:
-            # No magnets -> Hide everything until Update is clicked
-            self.ui.pushButton_Find.hide()
-            self.ui.pushButton_Find_2.hide()
-            self.ui.pushButton_2D_magnetic_field.hide()
-            self.ui.pushButton_atomic_kinetics.hide()
-            self.ui.pushButton_save_file.hide()
-       
+            # On experimental change we show buttons if there are magnets in memory
+            if hasattr(self.zeeman, 'magnets') and self.zeeman.magnets is not None:
+                for btn in calc_buttons:
+                    btn.show()
+                
+                self.ui.pushButton_atomic_kinetics.setEnabled(True)
+                
+            else:
+                # Si no hay imanes, aunque el cambio no sea estructural, no podemos calcular nada
+                for btn in calc_buttons:
+                    btn.hide()
+
+    def show_simulation_buttons(self):
+        '''Muestra los botones de cálculo y simulación'''
+        buttons = [
+            self.ui.pushButton_Find,
+            self.ui.pushButton_Find_2,
+            self.ui.pushButton_2D_magnetic_field,
+            self.ui.pushButton_atomic_kinetics,
+            self.ui.pushButton_save_file
+        ]
+        for btn in buttons:
+            btn.show()
+            
+        # Estilo visual para el botón de cinética (activo)
+        self.ui.pushButton_atomic_kinetics.setEnabled(True)
+        self.ui.pushButton_atomic_kinetics.setStyleSheet("background-color: #a1d99b;")
+    
     def prepare_lineEdits(self):
         '''
             We set the properties of the spinboxes in the upper left part of the GUI
@@ -653,8 +745,11 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         # Check number of magnets
         elif (self.zeeman.Npm-2)*self.zeeman.mag_diam > self.zeeman.LZ*1000: # Comparison made in [mm]
             self.values_error='Magnets cannot be arranged within the ZeemanSlower length. Check number of magnets, magnet diameter or length for deceleration.'
-            self.error = True
-        
+            self.show_error()
+            self.zeeman.Npm = int(self.zeeman.LZ*1000/self.zeeman.mag_diam)
+            self.ui.lineEdit_Number_of_magnets.setValue(self.zeeman.Npm)
+            self.load_GUI_data()
+       
         if self.error == True:
             self.ui.pushButton_Find.hide()
             self.ui.pushButton_Find_2.hide()
@@ -682,13 +777,16 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             Function to show a pop up window wth the error present within the values
         '''
         if self.test==True: print('-->> Entering Zeeman APP show_error')
+        if self.zeeman.error is not None:
+            self.values_error = self.zeeman.error
+            self.zeeman.error = None
         msg = QMessageBox()
         msg.setWindowIcon(QIcon('DOZE.ico')) 
         msg.setIcon(QMessageBox.Warning) # Icono de triángulo amarillo
         msg.setWindowTitle('Error')
         msg.setText(self.values_error)
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_() # Muestra la ventana y espera a que el usuario pulse OK
+        msg.exec_() # Muestra la ventana y esgepera a que el usuario pulse OK
         if self.test==True: print('<<--EXITING Zeeman APP show_error')
     
     
@@ -735,6 +833,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.size_mag = (self.zeeman.mag_diam,self.zeeman.mag_heig)   # Magnet size vector as requested by magpylib [m]
         self.zeeman.Tmagz = configur.getint('data_initial','Tmagz')          # Magnet remanescence [mT]
         
+              
         
         #Attributes whitout not shown in GUI
         self.zeeman.ext_tube_radius = configur.getfloat('data_initial','ext_tube_radius') # Distance from axis y=0 to external part of vacuum tub e[mm]
@@ -743,7 +842,15 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.iterations_max = configur.getint('data_initial','max_iters')   # Maximum number of iterations for each magnet optimization process [#]
         self.zeeman.sep_ini = configur.getfloat('data_initial','sep_ini')   # Fixed y distance betweeen magnet 0 and 1 [mm] (slope adaptation at beginning of the slower)
         self.zeeman.sep_last = configur.getfloat('data_initial','sep_last')   # Fixed y distance betweeen last magnet and previous one [mm] (exit speed selection)
+        self.zeeman.max_V_position = configur.getfloat('data_initial','max_V_position')     # Max separation distance from magnet center to atomic axis [mm]
         
+        for i in range(1,21):
+            name = f"dSP_V_{i}"
+            spinbox = getattr(self.ui, name, None)
+            if spinbox:
+                spinbox.setMaximum(self.zeeman.max_V_position)
+                spinbox.setMinimum(-self.zeeman.max_V_position)
+
         
         self.zeeman.N_vel = configur.getint('atomic_kinetics','N_vel')  # Number of velocities to be simulated (from zero to a 10% over Vcap)
         self.zeeman.Nt = int(configur.getfloat('atomic_kinetics','Nt')) # Time vector number of points
@@ -809,7 +916,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.gamma0 = configur.getfloat('atomic_parameter_'+self.search_Atom,'gamma')
         self.zeeman.mu_eff = 9.274e-24 * configur.getfloat('atomic_parameter_'+self.search_Atom,'mu_eff') #[J/T]
         
-        print ('m ', self.zeeman.m, '; WL_ge ', self.zeeman.WL_ge, '; gamma ', self.zeeman.gamma0, '; mu_eff ', self.zeeman.mu_eff)
+        # print ('m ', self.zeeman.m, '; WL_ge ', self.zeeman.WL_ge, '; gamma ', self.zeeman.gamma0, '; mu_eff ', self.zeeman.mu_eff)
         
                    
         self.ui.pushButton_Find_2.hide()
@@ -883,6 +990,12 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             # Calculate B_field, create magnets collection and set initial position
             
             self.zeeman.initial_B_calculation()
+            
+            if self.zeeman.error is not None:
+                self.error == True
+                self.show_error()
+                return
+            
             if self.zeeman.zero_cross == None:
                 self.error == True
                 self.values_error = 'B field does not cross zero. Check detuning, capture and ending speeds'
@@ -956,6 +1069,8 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             
             self.initial_pos_flag = True
             
+            self.zeeman.calculate_needed_B()
+            
             if self.test==True: print('<<--EXITING Zeeman APP position_ini()')
 
     def load_GUI_data(self): 
@@ -991,12 +1106,55 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
         self.zeeman.mag_heig = float(self.ui.lineEdit_mag_H.value())  
         self.zeeman.size_mag = (self.zeeman.mag_diam,self.zeeman.mag_heig)
                 
-        # Magnets remanescence [mT]
+        # Magnets remanescence [mT] and magnets update
         self.zeeman.Tmagz = int(self.ui.lineEdit_Tmagz.value())
+        
+        if hasattr(self.zeeman, 'magnets') and self.zeeman.magnets:
+            new_mag_val = float(self.zeeman.Tmagz)
+            
+            for mag_list in self.zeeman.magnets:
+                for mag in mag_list:
+                    if hasattr(mag, 'magnetization'):
+                        
+                        current_mag = list(mag.magnetization)
+                        
+                        # Update magnet with new remanenscence value
+                        for axis in range(3):
+                            if current_mag[axis] > 0:
+                                current_mag[axis] = new_mag_val
+                            elif current_mag[axis] < 0:
+                                current_mag[axis] = -new_mag_val
+
+                        mag.magnetization = current_mag
+                        
+
+                
+        # -------------------------------------------------------------------------
 
         self.ui.pushButton_Update.hide()
         
-        self.check_values() # We check if values are right
+        try:
+            # Aquí es donde ocurre la magia de actualizar imanes y gráficos
+            self.check_values() 
+            
+            # Recalculate field and re drawing
+            if hasattr(self.zeeman, 'magnets'):
+                print(self.zeeman.magnets)
+                self.zeeman.current_B()
+                self.zeeman.plot_data()
+            # # Si tienes una función que genera los imanes, llámala aquí
+            # # Y luego actualiza el gráfico
+            # self.zeeman.plot_data()
+            
+        except IndexError:
+            # Este es el error específico de Matplotlib cuando no hay líneas
+            print("Error: No se pueden dibujar los imanes. Comprueba que el número de imanes cabe en la longitud ZS.")
+            self.hide_simulation_buttons() # Aseguramos que los botones sigan ocultos
+            
+        except Exception as e:
+            # Para cualquier otro error inesperado
+            print(f"Error inesperado al cargar datos: {e}")
+            
     
         if self.test==True: print('<<--EXITING Zeeman APP load_GUI_data()')   
       
@@ -1337,6 +1495,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                     'sep_last':         'mm',    # Final Separation
                     'zero_cross':       '#',    # Zero-crossing Index
                     'min_magnet_distance': 'mm',# Minimum Magnet Distance
+                    'max_V_position': 'mm',     # Max V position for magnets
 
                     # --- Velocities and Capture Configuration ---
                     'V_cap':            'm/s',  # Capture Velocity
@@ -1614,14 +1773,14 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             #Case of void magnet (Bfield crossing zero)
             elif n==(self.zeeman.zero_cross+1):
                 aux = 1 
-                self.listSpinbox_movH[n].setValue(int(self.zeeman.magnets[0][n+aux].position[2]))
-                self.listSpinbox_movV[n].setValue(int(self.zeeman.magnets[0][n+aux].position[1]))    
+                self.listSpinbox_movH[n].setValue(round(float(self.zeeman.magnets[0][n+aux].position[2]),1))
+                self.listSpinbox_movV[n].setValue(round(float(self.zeeman.magnets[0][n+aux].position[1]),1))    
             #Rest of cases
             else:
                 if n==self.zeeman.Npm:
                     aux=0   #Last magnet moves with previous one
-                self.listSpinbox_movH[n].setValue(int(self.zeeman.magnets[0][n+aux].position[2]))
-                self.listSpinbox_movV[n].setValue(int(self.zeeman.magnets[0][n+aux].position[1])) 
+                self.listSpinbox_movH[n].setValue(round(float(self.zeeman.magnets[0][n+aux].position[2]),1))
+                self.listSpinbox_movV[n].setValue(round(float(self.zeeman.magnets[0][n+aux].position[1]),1)) 
         
         for i in range(len(self.listSpinbox_movH)):
             self.listSpinbox_movH[i].blockSignals(False)
@@ -1667,15 +1826,22 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             with h5py.File(fileName, 'r') as f:
                 
                 # --- STEP 1: LOAD SCALARS ---
+                print('max_V_position antes ', self.zeeman.max_V_position)
                 if "Simulation_Parameters" in f:
                     grp_params = f["Simulation_Parameters"]
                     
                     # 1.1 Load basic attributes
                     for key, val in grp_params.attrs.items():
-                        var_name = key.split('[')[0] 
+                        var_name = key.split('[')[0].strip() 
                         if var_name != 'Atom_Species' and hasattr(self.zeeman, var_name):
                             setattr(self.zeeman, var_name, val)
-                    
+                    print('max_V_position despues ', self.zeeman.max_V_position)
+                    for i in range(1,21):
+                        name = f"dSP_V_{i}"
+                        spinbox = getattr(self.ui, name, None)
+                        if spinbox:
+                            spinbox.setMaximum(self.zeeman.max_V_position)
+                            spinbox.setMinimum(-self.zeeman.max_V_position)
                     # 1.2 LOAD ATOM / ION SPECIES
                     if 'Atom_Species' in grp_params.attrs:
                         self.search_Atom = grp_params.attrs['Atom_Species']
@@ -1688,11 +1854,17 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                             print(f"Atom loaded: {self.search_Atom}")
 
                 # 1.3 Specific Dimensions
-                if 'mag_diam' in f: self.zeeman.mag_diam = float(f['mag_diam'][()])
-                if 'mag_heig' in f: self.zeeman.mag_heig = float(f['mag_heig'][()])
-                if 'Tmagz' in f:    self.zeeman.Tmagz = float(f['Tmagz'][()])
-                if 'ext_tube_radius' in f: self.zeeman.ext_tube_radius = float(f['ext_tube_radius'][()])
-
+                # print("Claves exactas en el H5:", list(f.keys()))
+                # if 'mag_diam' in f: self.zeeman.mag_diam = float(f['mag_diam'][()])
+                # if 'mag_heig' in f: self.zeeman.mag_heig = float(f['mag_heig'][()])
+                # if 'Tmagz' in f:    self.zeeman.Tmagz = float(f['Tmagz'][()])
+                # if 'ext_tube_radius' in f: self.zeeman.ext_tube_radius = float(f['ext_tube_radius'][()])
+                # print('parameters found in h5 file')
+                # if 'max_V_position' in f:
+                #     print('max_V_position encontrado en h5 file')
+                #     self.zeeman.max_V_position = float(f['max_V_position'][()])
+                    
+                            
                 self.zeeman.size_mag = (self.zeeman.mag_diam, self.zeeman.mag_heig)
 
                 # --- STEP 2: RECALCULATE PHYSICS ---
@@ -1702,22 +1874,98 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                 # --- STEP 3: CREATE MAGNETS ---
                 self.zeeman.create_magnets()
                 
+
                 # --- STEP 4: APPLY POSITIONS ---
                 if "Magnets_Config" in f:
                     grp_mag = f["Magnets_Config"]
+                    
+                    # 1. Recuperamos el zero_cross antiguo (Buscamos la clave que empieza por 'zero_cross'
+                    # ya que en el H5 se guarda con unidades, ej: 'zero_cross[#]')
+                    old_zc = -2
+                    if "Simulation_Parameters" in f:
+                        for key, val in f["Simulation_Parameters"].attrs.items():
+                            if key.startswith('zero_cross'):
+                                old_zc = int(val)
+                                print('old_zc ', old_zc)
+                                break
+                    
+                    # 2. El zero_cross nuevo (recalculado en STEP 2/3)
+                    new_zc = int(getattr(self.zeeman, 'zero_cross', -2))
+                    print('new_zc ', new_zc)
+                    
                     for key in grp_mag.keys():
                         if "positions_set_" in key:
                             try:
                                 idx_str = key.split('set_')[1].split('[')[0]
                                 set_index = int(idx_str)
                                 loaded_positions = grp_mag[key][()]
+                                
                                 if set_index < len(self.zeeman.magnets):
                                     target_list = self.zeeman.magnets[set_index]
-                                    limit = min(len(target_list), len(loaded_positions))
-                                    for k in range(limit):
-                                        target_list[k].position = loaded_positions[k]
-                            except Exception: pass
-
+                                    
+                                    # A. Filtramos el imán virtual antiguo de la lista cargada
+                                    real_positions = []
+                                    for i, pos in enumerate(loaded_positions):
+                                        if i == (old_zc + 1):
+                                            continue # Ignoramos la posición del imán virtual antiguo
+                                        real_positions.append(pos)
+                                        
+                                    # B. Aplicamos las posiciones y FORZAMOS magnetización
+                                    pos_idx = 0
+                                    for k in range(len(target_list)):
+                                        if k == (new_zc + 1):
+                                            continue # El imán virtual nuevo no se toca y se queda en 0
+                                            
+                                        # if pos_idx < len(real_positions):
+                                        #     # 1. Asignamos la posición cargada
+                                        #     target_list[k].position = real_positions[pos_idx]
+                                            
+                                        #     # 2. Forzamos la regla de polaridad
+                                        #     if hasattr(target_list[k], 'magnetization'):
+                                        #     # Extraemos el vector actual (ej: [0, 0, M])
+                                        #         mag_vector = list(target_list[k].magnetization)
+                                                
+                                        #         # Recorremos X, Y, Z para aplicar el signo al eje activo
+                                        #         for axis in range(3):
+                                        #             if mag_vector[axis] != 0:
+                                        #                 mag_val = abs(mag_vector[axis])
+                                        #                 if k <= (old_zc + 1):
+                                        #                     # Previos al zero cross guardado: Positiva
+                                        #                     mag_vector[axis] = mag_val
+                                        #                 else:
+                                        #                     # Posteriores al zero cross guardado: Negativa
+                                        #                     mag_vector[axis] = -mag_val
+                                                            
+                                        #         # Reasignamos el vector corregido al imán
+                                        #         target_list[k].magnetization = mag_vector
+                                                
+                                        #     pos_idx += 1  
+                                        if pos_idx < len(real_positions):
+                                            # 1. Asignamos la posición cargada
+                                            target_list[k].position = real_positions[pos_idx]
+                                            
+                                            # 2. Forzamos el valor de magnetización manteniendo el signo correcto
+                                            if hasattr(target_list[k], 'magnetization'):
+                                                mag_vector = list(target_list[k].magnetization)
+                                                new_mag_val = float(self.zeeman.Tmagz) # Usamos el valor real recién cargado
+                                                
+                                                # Recorremos X, Y, Z para aplicar la nueva magnitud respetando la física
+                                                for axis in range(3):
+                                                    if mag_vector[axis] > 0:
+                                                        mag_vector[axis] = new_mag_val
+                                                    elif mag_vector[axis] < 0:
+                                                        mag_vector[axis] = -new_mag_val
+                                                        
+                                                # Reasignamos el vector corregido al imán
+                                                target_list[k].magnetization = mag_vector
+                                            
+                                            pos_idx += 1
+                                            
+                            except Exception as e:
+                                print(f"Error cargando posiciones: {e}")
+                                pass
+                
+                                               
                 # --- STEP 5: KINETICS ---
                 if "Atomic_Kinetics" in f:
                     grp_kin = f["Atomic_Kinetics"]
@@ -1725,6 +1973,19 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                         if "Atoms positions" in key: self.zeeman.Atoms_position = 0.001 * grp_kin[key][()] 
                         if "Atom velocities" in key: self.zeeman.Atoms_speed = grp_kin[key][()]
 
+
+                # --- STEP 6: FIELD PROFILES (Cargar campo ideal) ---
+                if "Field_Profiles" in f:
+                    grp_fields = f["Field_Profiles"]
+                    if "By_ideal" in grp_fields:
+                        # Sobrescribimos el By_ideal recalculado con el original del fichero
+                        self.zeeman.By_ideal_full = grp_fields["By_ideal"][()]
+                        if self.test: print("Campo By_ideal original cargado del fichero .h5")
+                        
+                    # (Opcional) Si también guardaste el array espacial 'z' en el h5, 
+                    # descomenta estas dos líneas para cargarlo también y evitar problemas de dimensiones:
+                    if "z_axis" in grp_fields:
+                        self.zeeman.z_axis_full = grp_fields["z"][()]
             # =============================================================
             # UPDATE INTERFACE & VISIBILITY
             # =============================================================
@@ -1760,6 +2021,8 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
             # 4. Graphics
             self.pw.ax_B.clear()
             self.pw.ax_B1.clear()
+            self.zeeman.initial_B_calculation()
+            print('By_ideal ', self.zeeman.By_ideal, self.zeeman.By_ideal_full)
             self.zeeman.initial_plot(1000*self.zeeman.z, self.zeeman.By_ideal, self.zeeman.By_current)
             self.update_needed_B() # Update positions
             self.pw.draw()
@@ -1834,7 +2097,7 @@ class app_gui(QMainWindow,ZeemanGUI.Ui_MainWindow):
                 
             if hasattr(self.zeeman, 'Tmagz') and hasattr(self.ui, 'lineEdit_Tmagz'):
                 self.ui.lineEdit_Tmagz.setValue(self.zeeman.Tmagz) # Tmagz suele ser entero o float directo en mT
-
+            
             # 8. Aparatus Length (Cálculo derivado)
             # Nombre en GUI: lineEdit_Length_apparatus
             if hasattr(self.ui, 'lineEdit_Length_apparatus'):

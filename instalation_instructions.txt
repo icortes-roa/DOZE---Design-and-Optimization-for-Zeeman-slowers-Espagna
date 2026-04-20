@@ -1,15 +1,14 @@
----------------------------------IF YOU DON'T USE PYTHON--------------------------------
+--------------------------------IF YOU DON'T USE PYTHON-------------------------------
 If you are a user that doesn't use Python, we recommend you to use the compiled tool
-available in release section.
+available in 4 different versions:
+ - Single EXE file and no console for logging.
 
-Just download and decompress the ZIP package and double-click on the EXE file.
-
----------------------------------- IF YOU USE ANACONDA----------------------------------
+--------------------------------- IF YOU USE ANACONDA---------------------------------
 Automatic installation:
- - Run the file install_conda.bat from windows command console or double clic on it.
+ - Run the file install_conda.bat from window console or double clic on it.
 
 Automatic execution:
- - Run the file run_conda.bat from windows command console or double clic on it.
+ - Run the file run_conda.bat from window console or double clic on it.
 
 Manual installation:
 1) Download all files in the repo to a folder in your PC.
@@ -27,12 +26,12 @@ Manual execution:
 	python -m ZeemanAPP
 
 
-------------------------------- IF YOU DON'T USE ANACONDA--------------------------------
+------------------------------ IF YOU DON'T USE ANACONDA-------------------------------
 Automatic installation:
- - Run the file install_noconda.bat from windows command console or double clic on it.
+ - Run the file install_noconda.bat from window console or double clic on it.
 
 Automatic execution:
- - Run the file run_noconda.bat from windows command console or double clic on it.
+ - Run the file run_noconda.bat from window console or double clic on it.
 
 Manual installation:
 1) Check Python.exe is in your windwos path
@@ -57,4 +56,5 @@ Manual execution:
    Or use the name of environment you have used instead of ROA_DOZE.
 3) Be sure the .py source file is in the same folder and execute:
 	python ZeemanAPP.py
+
 
