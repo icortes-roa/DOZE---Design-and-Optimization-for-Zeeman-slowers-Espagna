@@ -243,6 +243,7 @@ class Ui_MainWindow(object):
         self.pushButton_atomic_kinetics = QPushButton(self.centralwidget)
         self.pushButton_atomic_kinetics.setObjectName(u"pushButton_atomic_kinetics")
         self.pushButton_atomic_kinetics.setGeometry(QRect(154, 310, 110, 20))
+        self.pushButton_atomic_kinetics.setStyleSheet("background-color: #a1d99b;")
         sizePolicy1.setHeightForWidth(self.pushButton_atomic_kinetics.sizePolicy().hasHeightForWidth())
         self.pushButton_atomic_kinetics.setSizePolicy(sizePolicy1)
         self.pushButton_atomic_kinetics.setFont(font1)
@@ -951,6 +952,12 @@ class Ui_MainWindow(object):
         self.label_4.setGeometry(QRect(162, 675, 126, 129))
         self.label_4.setPixmap(QPixmap(u"logo.jpg"))
         self.label_4.setScaledContents(True)
+        self.label_5 = QLabel(self.centralwidget)
+        self.label_5.setObjectName(u"label_5")
+        self.label_5.setGeometry(QRect(800, 10, 130, 65))
+        self.label_5.setPixmap(QPixmap(u"TOCK_logo.png"))
+        self.label_5.setScaledContents(True)
+        self.label_5.setToolTip("""The project (22IEM01 TOCK) has received funding \n from the European Partnership on Metrology, \n co-financed from the European Union’s \n Horizon Europe Research and Innovation Programme \n and by the Participating States.""")
         MainWindow.setCentralWidget(self.centralwidget)
         self.pushButton_2D_magnetic_field.raise_()
         self.pushButton_Update.raise_()
@@ -1048,6 +1055,7 @@ class Ui_MainWindow(object):
         self.line_3.raise_()
         self.label_3.raise_()
         self.label_4.raise_()
+        self.label_5.raise_()
         
         # =========================================================================
         # TAB ORDER CONFIGURATION
