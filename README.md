@@ -12,7 +12,7 @@ DOZE allows users to perform comprehensive calculations regarding the slowing of
 
 DOZE includes the following functionalities:
 
-* **Field Calculation:** Calculates the ideal magnetic field profile required to slow **$^{87}\text{Sr}$** or **$^{171}\text{Yb}$** atoms based on specific parameters (laser power, detuning, capture velocity, and final velocity).
+* **Field Calculation:** Calculates the ideal magnetic field profile required to slow **$^{87}\text{Sr}$**, **$^{171}\text{Yb}$**,  **$^{199}\text{Hg}$**, **$^{88}\text{Sr}$**, **$^{174}\text{Yb}$**,  **$^{111}\text{Cd}$**, **$^{24}\text{Mg}$** atoms based on specific parameters (laser power, detuning, capture velocity, and final velocity) and expandable to other species..
 * **Manual Optimization:** Allows the user to manually adjust magnet positions to observe how the generated magnetic field compares to the ideal profile in real-time.
 * **Automatic Optimization:** Features an algorithm to automatically position magnets, approximating the ideal field as closely as possible.
 * **Kinetic Simulations:** Runs calculations to simulate atomic kinetics along the slower.
