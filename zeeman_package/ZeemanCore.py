@@ -23,7 +23,7 @@ import matplotlib.patches as patches
 
 from datetime import datetime as dtm
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['font.sans-serif'] = ['Calibri']
@@ -162,6 +162,10 @@ class ZeemanCore(object):
         self.others_size = 14
         self.tick_size = 12
         
+        self.error = None
+        
+        self.max_V_position = 150.0     # Max separation distance from magnet center to atomic axis [mm]
+        
         self.test = False                
         print('<<-- FINISHED Zeeman Core __init__()')
         
@@ -244,11 +248,26 @@ class ZeemanCore(object):
         #Calculation of decceleration needed. 
         # Factor scale_factor_B=1.05 (default) is to compensate for excessive B_field outside the ideal one at the beginning and end of ideal field
         needed_a=-0.5*(self.V_cap**2-self.V_fin**2)/(self.LZ*self.scale_factor_B)
+        a_max=hbar*self.k0*self.GAMMA0/(2*self.m)
+        print(needed_a, a_max)
+        if abs(needed_a) > abs(a_max):
+            self.error = "Decceleration requested is over physical limit! \n Reduce the difference (V_cap-V_fin) or increase the distance."
+        else:            
+            s_required = abs(needed_a) / (a_max - abs(needed_a))
+            I_required = (s_required * self.I_sat) / self.eta         
+            area_factor = (np.pi * self.w0**2) / 2.0
+            power_mW = I_required * area_factor * 1000
+            print ('Minimum power ', power_mW)
+            # power_mW = power_W * 1000
+            if power_mW > self.P * 1000:
+                self.error = "Power needed is higher than power stated. Increase the power available or reduce the beam waist."
+        
               
         'Creating an axis to calculate velocities at each point'
         
         V_z=(self.V_cap**2+2*needed_a*self.z)**(1/2) #Designed velocity along the axis [m/s]
         
+        self.Delta0 = self.d0_Mhz*2*pi*1e6   #Updating Delta0 value
         Doppler=self.Delta0+self.k0*V_z #Detuning caused by Doppler effect.
         
     
@@ -382,9 +401,9 @@ class ZeemanCore(object):
         self.ax_B.set_ylabel('Magnetic Field (mT)',fontsize=self.others_size)
         plt.xlabel('Z-Distance (mm)',fontsize=self.others_size)
         self.ax_magnets.axhline(y=0,xmin=0,xmax=1,linestyle='dashed', color='gray', linewidth=1)
-        # self.ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
-        # self.ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
-        # self.ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.1, lw=0)
+        self.ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        self.ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        self.ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.1, lw=0)
         self.ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)',fontsize=self.others_size)
         
 
@@ -533,14 +552,23 @@ class ZeemanCore(object):
     ###############################################################################
     def aproximate(self,i,dist):
         # if self.test==True: print('-->>Entering Zeeman Core aproximate()')
-        self.magnets[0][i].move([0,-dist,0])
-        self.magnets[1][i].move([0,dist,0])
+        if self.magnets[0][i].position[1]-dist <= self.max_V_position:
+            self.magnets[0][i].move([0,-dist,0])
+            self.magnets[1][i].move([0,dist,0])
+        else:
+            self.magnets[0][i].position[1] = self.max_V_position
+            self.magnets[1][i].position[1] = -self.max_V_position
         # if self.test==True: print('<<--EXITING Zeeman Core aproximate()')
     
     def separate(self,i,dist):
         # if self.test==True: print('-->>Entering Zeeman Core separate()')
-        self.magnets[0][i].move([0,dist,0])
-        self.magnets[1][i].move([0,-dist,0])
+        if self.magnets[0][i].position[1]+dist <= self.max_V_position:
+            self.magnets[0][i].move([0,dist,0])
+            self.magnets[1][i].move([0,-dist,0])
+        else:
+            self.magnets[0][i].position[1] = self.max_V_position
+            self.magnets[1][i].position[1] = -self.max_V_position
+            
         # if self.test==True: print('<<--EXITING Zeeman Core separate()')
 
     def horizontal(self,i,dist):
@@ -720,7 +748,7 @@ class ZeemanCore(object):
             # We calculate the new deviation from the ideal B_field
             desv[1] = np.linalg.norm(new_B_tbo[:,1]-self.By_ideal)
             
-            # If deviation is better than previous one, we update it and reset the counter.
+            # If deviation is better than previous one, we  it and reset the counter.
             if round(desv[1],2) < round(desv[0],2):
                 desv[0]=desv[1]
                 iter_mins=0
@@ -1050,9 +1078,9 @@ class ZeemanCore(object):
         
         # We draw the magnets positions in the bottom subplot
         self.subplot_2D_ax_magnets.axhline(y=0,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
-        # self.subplot_2D_ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
-        # self.subplot_2D_ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
-        # self.subplot_2D_ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.2, lw=0)
+        self.subplot_2D_ax_magnets.axhline(y=self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        self.subplot_2D_ax_magnets.axhline(y=-self.safety_distance,xmin=0,xmax=1,linestyle='dotted', color='gray', linewidth=0.5)
+        self.subplot_2D_ax_magnets.axhspan(-self.ext_tube_radius,self.ext_tube_radius, color='blue', alpha=0.2, lw=0)
         self.subplot_2D_ax_magnets.set_ylabel('Y-Distance to AtomicBeam (mm)',fontsize=self.others_size)
         
         # vertical lines are drawed where the magnets are positioned   
@@ -1138,7 +1166,99 @@ class ZeemanCore(object):
         if self.test==True: print('<<-- FINISHED Zeeman Core draw_2D()')
 
 
-
+    # def B_field_2D_lines_drawing(self):
+    #     '''
+    #     Crea un gráfico 2D con las líneas de campo B sobre el gráfico de imanes.
+    #     '''
+    #     if self.test: print('-->>Entering Zeeman Core B_field_2D_lines_drawing()')
+    
+    #     # 1. Actualizar cálculos
+    #     self.current_B()
+    #     self.draw_2D(1000*self.z, self.By_ideal, self.By_current, self.magnets)
+    
+    #     # 2. Preparar datos para las líneas de B_ideal (con padding)
+    #     Bz_ideal0s = np.concatenate([np.zeros(self.B_points_additional), self.By_ideal, np.zeros(self.B_points_additional)])
+        
+    #     # 3. Actualizar datos en los ejes existentes (Top Subplot)
+    #     try:
+    #         self.subplot_2D_ax_B.lines[0].set_data(1000*self.z_full, Bz_ideal0s) 
+    #         self.subplot_2D_ax_B.lines[1].set_data(1000*self.z_full, self.By_current_full)
+    #     except IndexError:
+    #         if self.test: print("Warning: Lines not initialized in subplot_2D_ax_B")
+    
+    #     # 4. Calcular rejilla para Streamplot (Lower Subplot)
+    #     self.y_min, self.y_max, _ = self.search_position_magnet(1)
+    #     # Evitar divisiones por cero o rangos nulos
+    #     ys = np.linspace(1.5*self.y_min, 1.5*self.y_max, 50) 
+    #     zs = 1000 * self.z_full
+        
+    #     # Crear grid de observación para magpylib
+    #     grid = np.array([[(0, y, z/1000) for y in ys] for z in zs]) # z a metros para magpylib
+        
+    #     # Calcular B en la rejilla
+    #     B = self.col.getB(grid)
+    #     Bz = np.transpose(B[:,:,2])
+    #     By = np.transpose(B[:,:,1])
+    #     ampB = np.transpose(np.linalg.norm(B, axis=2))
+        
+    #     # 5. Dibujar Streamplot con manejo de Log
+    #     # Evitamos log(0) sumando una constante pequeña (epsilon)
+    #     Z_mesh, Y_mesh = np.meshgrid(zs, ys)
+    #     color_data = np.log(ampB + 1e-12) 
+        
+    #     # Limpiamos antes de dibujar para no superponer
+    #     self.subplot_2D_ax_magnets.clear()
+        
+    #     strm = self.subplot_2D_ax_magnets.streamplot(
+    #         Z_mesh, Y_mesh, Bz, By, 
+    #         density=1.5, # Bajamos densidad para que no sature
+    #         color=color_data, 
+    #         linewidth=0.5, 
+    #         cmap='winter', 
+    #         zorder=1
+    #     )
+    
+    #     # 6. Dibujar imanes y etiquetas (Loop corregido)
+    #     for i in range(len(self.magnets[0])):
+    #         if i == (self.zero_cross + 1):
+    #             continue # Saltar imán virtual
+                
+    #         pos_z = self.magnets[0][i].position[2]
+    #         pos_y = self.magnets[0][i].position[1]
+            
+    #         # Dibujar líneas verticales y etiquetas rojas
+    #         self.subplot_2D_ax_magnets.axvline(x=pos_z, color='gray', linestyle='--', alpha=0.3, zorder=0)
+    #         self.subplot_2D_ax_magnets.text(pos_z, 0, str(round(pos_y, 1)), 
+    #                                         color='red', fontsize=self.tick_size, 
+    #                                         ha='center', va='bottom', zorder=5)
+    
+    #         # Dibujar rectángulos de los imanes (Simplificado)
+    #         m_z = self.magnets[0][i].magnetization[2]
+    #         # Lógica de colores según polaridad
+    #         c1, c2 = ('red', 'blue') if m_z > 0 else ('blue', 'red')
+            
+    #         # Magnet 0 (arriba/abajo según tu setup)
+    #         rect_base_y = pos_y - self.size_mag[1]/2
+    #         self.subplot_2D_ax_magnets.add_patch(patches.Rectangle(
+    #             (pos_z - self.size_mag[0]/2, rect_base_y), 
+    #             self.size_mag[0], self.size_mag[1]/2, facecolor=c1, zorder=3))
+    #         self.subplot_2D_ax_magnets.add_patch(patches.Rectangle(
+    #             (pos_z - self.size_mag[0]/2, pos_y), 
+    #             self.size_mag[0], self.size_mag[1]/2, facecolor=c2, zorder=3))
+    
+    #     # 7. Ajustes finales de ejes
+    #     self.subplot_2D_ax_B.relim()
+    #     self.subplot_2D_ax_B.autoscale_view()
+    #     self.subplot_2D_ax_magnets.set_ylim(1.5*self.y_min, 1.5*self.y_max)
+        
+    #     # IMPORTANTE: En lugar de self.fig_2D.show(), usa canvas.draw() si estás en una GUI
+    #     if hasattr(self, 'canvas'):
+    #         self.canvas.draw()
+    #     else:
+    #         self.fig_2D.canvas.draw()
+            
+    #     if self.test: print('<<-- FINISHED Zeeman Core B_field_2D_lines_drawing()')
+    
     def B_field_2D_lines_drawing(self):
         '''
             Creates a 2D graph with the lines of the B_field on top of magnets graph (lower one)
@@ -1147,8 +1267,9 @@ class ZeemanCore(object):
         if self.test==True: print('-->>Entering Zeeman Core B_field_2D_lines_drawing()')
 
         self.current_B()
+
         self.draw_2D(1000*self.z,self.By_ideal,self.By_current,self.magnets)
-        print('z size =', np.size(self.z), 'By_ideal_size =', np.size(self.By_ideal), 'By_current_size =', np.size(self.By_current))
+        if self.test==True: print('z size =', np.size(self.z), 'By_ideal_size =', np.size(self.By_ideal), 'By_current_size =', np.size(self.By_current))
 
         # We add some points before and after the braking zone (0-self.LZ)
         Bz_ideal0s=np.append(np.zeros(self.B_points_additional),self.By_ideal)
@@ -1167,6 +1288,7 @@ class ZeemanCore(object):
 
         # We scale the drawing        
         self.subplot_2D_ax_B.autoscale_view()
+     
 
         # We look for the max and min position in the magnets
         self.y_min,self.y_max,self.y_salto = self.search_position_magnet(1)
@@ -1183,10 +1305,11 @@ class ZeemanCore(object):
         B = self.col.getB(grid)
         Bz=np.transpose(B[:,:,2])
         By=np.transpose(B[:,:,1])
-        ampB = np.transpose(np.linalg.norm(B, axis=2))
+        ampB = np.transpose(np.linalg.norm(B, axis=2))+1e-12
         
         # We create grid for the streamplot: create and transpose for z-horizontal
         Z,Y=np.meshgrid(zs,ys)
+               
         self.subplot_2D_ax_magnets.streamplot(Z, Y, Bz, By,density = 8, color = np.log(ampB),
                                               linewidth=0.5, cmap='winter',zorder=1)
         
@@ -1217,6 +1340,8 @@ class ZeemanCore(object):
                     self.subplot_2D_ax_magnets.add_patch(patches.Rectangle((self.magnets[1][i].position[2]-self.size_mag[0]/2,self.magnets[1][i].position[1]), self.size_mag[0],self.size_mag[1]/2, facecolor='red',edgecolor=None,zorder=2))
                     self.subplot_2D_ax_magnets.add_patch(patches.Rectangle((self.magnets[1][i].position[2]-self.size_mag[0]/2,self.magnets[1][i].position[1]-self.size_mag[1]/2), self.size_mag[0], self.size_mag[1], edgecolor='grey',fill=False,zorder=2))
                     # 1. Aplicar márgenes (el 10% que querías)
+        
+        
         self.subplot_2D_ax_B.relim()
         self.subplot_2D_ax_B.margins(0.1, 0.2)       
         self.subplot_2D_ax_magnets.margins(0.1,0.2)
@@ -1228,6 +1353,8 @@ class ZeemanCore(object):
         self.subplot_2D_ax_B.relim()
         self.subplot_2D_ax_B.autoscale_view()
         
+
+        
         for ax in [self.subplot_2D_ax_B, self.subplot_2D_ax_magnets]:
             ax.tick_params(axis='both', labelsize=self.tick_size)
             # Opcional: Esto asegura que el layout no se rompa al agrandar la fuente
@@ -1235,6 +1362,8 @@ class ZeemanCore(object):
         # self.fig_2D.tight_layout()
         
         self.fig_2D.show()
+        
+
         
         if self.test==True: print('<<-- FINISHED Zeeman Core B_field_2D_lines_drawing()')
         
@@ -1360,7 +1489,7 @@ class ZeemanCore(object):
         # Graphics creation
         now=dtm.now()
         time_stamp = now.strftime("%d-%m-%Y %H:%M:%S")
-        title='Atoms deceleration in a Zeeman Slower'#' ('+str(time_stamp)+')'
+        title='Atoms deceleration in a Zeeman Slower (' +str(time_stamp)+ ')'
         plt.ion()
 
         self.fig_vels=plt.figure(title,figsize=(16,9))
@@ -1372,8 +1501,30 @@ class ZeemanCore(object):
            
         END = round(0.99 * self.Nt)
         
+        x_ini =self.atoms_initial_z_position
+        x_fin = 1000 * self.LZ+self.dist_veloc_meas*10*1.15
+        
+        print(x_ini,x_fin)
+        
+        subplots_vels.set_xlim([x_ini,x_fin])
+        
         for k in range(0, self.N):
-            subplots_vels.plot(np.transpose(1e3*self.Atoms_position[k, :END, 2]), np.transpose(self.Atoms_speed[k, :END, 2]), label=str(int(self.Vz[k]))+' m/s')
+            z_mm = 1e3 * self.Atoms_position[k, :END, 2]
+            v_z = self.Atoms_speed[k, :END, 2]
+            
+            over_limit = z_mm > x_fin
+            
+            if np.any(over_limit):
+                idx_cut = np.argmax(over_limit)
+                # Cortamos los arrays hasta ese índice
+                z_plot = z_mm[:idx_cut]
+                v_plot = v_z[:idx_cut]
+            else:
+                # Si nunca lo supera, pintamos todo el vector
+                z_plot = z_mm
+                v_plot = v_z
+            
+            subplots_vels.plot(z_plot, v_plot, label=str(int(self.Vz[k]))+' m/s')
         
         
         try:
@@ -1408,16 +1559,17 @@ class ZeemanCore(object):
         subplots_vels.axvline(x=0, linestyle='dashed', color='gray', linewidth=1, zorder=1)
         subplots_vels.axvline(x=round(self.LZ * 1000), linestyle='dashed', color='gray', linewidth=1, zorder=1)
         subplots_vels.legend(loc='upper right', ncols=int(len(self.Vz)/4),fontsize=self.others_size)
-
-        if np.min(self.Atoms_speed[len(self.Vz)-3,index_end_speed,2]) > 0:
-            # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
-            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
-        else:
-            # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
-            subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
+        
+        
+        # if np.min(self.Atoms_speed[len(self.Vz)-3,index_end_speed,2]) > 0:
+        #     # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+        #     subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
+        # else:
+        #     # subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2], round(1.40 * 1000 * self.LZ)])
+        #     subplots_vels.set_xlim([1e3*self.Atoms_position[0, 0, 2],(1000 * self.LZ+self.dist_veloc_meas*10*1.15)])
         y2_axis = self.fig_vels.axes[0].twinx()
         # y2_axis.plot(1000 * self.z_axis_full[:, 2], self.By_ideal_full, linestyle='dashed', alpha=0.5, label='By_ideal',linewidth=0.5)
-        y2_axis.plot(1000 * self.z_axis_full[:, 2], B, alpha=0.5, color='gray', label='B$_{y}$ magnets generated',linewidth=0.5)
+        y2_axis.plot(1000 * self.z_axis_full[:, 2], B, alpha=0.5, color='gray', label='$\pm$ B$_{y}$ magnets generated',linewidth=0.5)
         y2_axis.plot(1000 * self.z_axis_full[:, 2], -B, alpha=0.5, color='gray',linewidth=0.5)
         
         
